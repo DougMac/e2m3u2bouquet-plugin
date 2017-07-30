@@ -9,6 +9,7 @@ e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
 @license:    GNU GENERAL PUBLIC LICENSE version 3
 @deffield    updated: Updated
 """
+
 import sys
 import os
 import re
@@ -20,6 +21,7 @@ import tempfile
 import glob
 import ssl
 import hashlib
+import base64
 from PIL import Image
 from collections import OrderedDict
 from collections import deque
@@ -28,9 +30,9 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
 __all__ = []
-__version__ = '0.5.5.2'
+__version__ = '0.5.6'
 __date__ = '2017-06-04'
-__updated__ = '2017-07-29'
+__updated__ = '2017-07-30'
 
 
 DEBUG = 0
@@ -39,8 +41,8 @@ TESTRUN = 0
 ENIGMAPATH = "/etc/enigma2/"
 EPGIMPORTPATH = "/etc/epgimport/"
 PICONSPATH = "/usr/share/enigma2/picon/"
-PROVIDERS = []
-PROVIDERSURL = "https://raw.githubusercontent.com/su1s/e2m3u2bouquet/master/providers.txt"
+PROVIDERS = {}
+PROVIDERSURL = "https://raw.githubusercontent.com/su1s/e2m3u2bouquet/master/providers.enc"
 
 class CLIError(Exception):
     """Generic exception to raise and log different fatal errors."""
@@ -743,6 +745,8 @@ class IPTVSetup:
         if DEBUG:
             print("creating EPGImporter config")
         # create channels file
+        if not os.path.isdir(EPGIMPORTPATH):
+            os.makedirs(EPGIMPORTPATH)
         channels_filename = os.path.join(EPGIMPORTPATH, 'suls_iptv_channels.xml')
 
         with open(channels_filename, "w+") as f:
@@ -800,27 +804,37 @@ class IPTVSetup:
             if line == "400: Invalid request\n":
                 print("Providers download is invalid please resolve or use URL based setup")
                 sys(exit(1))
-            PROVIDERS.append({'name': line.split(',')[0],
-                              'm3u': line.split(',')[1],
-                              'epg': line.split(',')[2],
-                              'delimiter_category': int(line.split(',')[3]),
-                              'delimiter_title': int(line.split(',')[4]),
-                              'delimiter_tvgid': int(line.split(',')[5]),
-                              'delimiter_logourl': int(line.split(',')[6])})
+            line = base64.b64decode(line)
+            provider = {
+                'name': line.split(',')[0],
+                'm3u': line.split(',')[1],
+                'epg': line.split(',')[2],
+                'delimiter_category': int(line.split(',')[3]),
+                'delimiter_title': int(line.split(',')[4]),
+                'delimiter_tvgid': int(line.split(',')[5]),
+                'delimiter_logourl': int(line.split(',')[6])
+            }
+            PROVIDERS[provider['name']] = provider
         f.close()
+        return PROVIDERS
 
     def process_provider(self, provider, username, password):
         supported_providers = ""
         for line in PROVIDERS:
-            supported_providers += " " + line['name']
-            if line['name'].upper() == provider.upper():
+            supported_providers += " " + PROVIDERS[line]['name']
+            if PROVIDERS[line]['name'].upper() == provider.upper():
                 if DEBUG:
                     print("----Provider setup details----")
-                    print("m3u = " + line['m3u'].replace("USERNAME", username).replace("PASSWORD", password))
-                    print("epg = " + line['epg'].replace("USERNAME", username).replace("PASSWORD", password) + "\n")
-                return line['m3u'].replace("USERNAME", username).replace("PASSWORD", password), line['epg'].replace(
-                    "USERNAME", username).replace("PASSWORD", password), line['delimiter_category'], line[
-                           'delimiter_title'], line['delimiter_tvgid'], line['delimiter_logourl'], supported_providers
+                    print("m3u = " + PROVIDERS[line]['m3u'].replace("USERNAME", username).replace("PASSWORD", password))
+                    print("epg = " + PROVIDERS[line]['epg'].replace("USERNAME", username).replace("PASSWORD", password) + "\n")
+                return PROVIDERS[line]['m3u'].replace("USERNAME", username).replace("PASSWORD", password), \
+                       PROVIDERS[line]['epg'].replace(
+                    "USERNAME", username).replace("PASSWORD", password), \
+                       PROVIDERS[line]['delimiter_category'], \
+                       PROVIDERS[line]['delimiter_title'], \
+                       PROVIDERS[line]['delimiter_tvgid'], \
+                       PROVIDERS[line]['delimiter_logourl'], \
+                       supported_providers
         # If we get here the supplied provider is invalid
         return "NOTFOUND", "", 0, 0, 0, 0, supported_providers
 
