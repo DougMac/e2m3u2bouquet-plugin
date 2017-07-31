@@ -1,0 +1,11 @@
+Package: enigma2-plugin-extensions-e2m3u2bouquet
+Version: 0.6
+Description: Multi Provider IPTV Bouquet Maker For Enigma2
+Section: extra
+Priority: optional
+Maintainer: Doug Mackay, Dave Sully
+Architecture: all
+OE: enigma2-plugin-extensions-e2m3u2bouquet
+Depends: python-argparse, python-image, python-imaging
+Recommends: enigma2-plugin-extensions-epgimport
+Homepage: https://www.suls.co.uk/enigma2-iptv-bouquets-with-epg/

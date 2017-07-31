@@ -1,0 +1,27 @@
+#!/bin/sh
+echo "********************************************"
+echo "Removing IPTV bouquets"
+echo "********************************************"
+echo
+cd /etc/enigma2/
+sed -i '/suls_iptv/d' bouquets.tv
+rm bouquets.tv.bak
+echo
+echo "********************************************"
+echo "Removing files"
+echo "********************************************"
+echo
+rm -r /usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet > /dev/null 2>&1
+find /etc/enigma2/ -type f -name '*suls_iptv*' -delete
+find /etc/epgimport/ -type f -name '*suls_iptv*' -delete
+echo
+echo "********************************************"
+echo "Engima2 IPTV E2m3u2bouquet plugin uninstalled"
+echo "********************************************"
+echo
+echo "********************************************"
+echo "Restarting Engima2 "
+echo "********************************************"
+echo
+init 4; sleep 4; init 3
+exit 0

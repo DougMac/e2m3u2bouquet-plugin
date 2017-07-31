@@ -1,0 +1,6 @@
+#!/bin/sh
+echo
+echo "********************************************"
+echo "Engima2 IPTV E2m3u2bouquet plugin installed"
+echo "********************************************"
+exit 0
