@@ -111,7 +111,8 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
         list = [ self.cfg_autobouquetupdate ]
         if self.E2M3U2B.autobouquetupdate.value:
             list.append(self.cfg_updateinterval)
-        list.append(self.cfg_autobouquetupdateatboot)
+        # leave update at boot disabled for now
+        # list.append(self.cfg_autobouquetupdateatboot)
         list.append(self.cfg_providername)
         list.append(self.cfg_username)
         list.append(self.cfg_password)
@@ -138,6 +139,23 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
             x[1].save()
         self.close()
 
+    def manual_update(self):
+        """Manual update
+        """
+        self.session.openWithCallback(self.manual_update_callback, MessageBox, _("Update of channels will start.\n"
+                                                                                   "This may take a few minutes.\n"
+                                                                                   "Proceed?"), MessageBox.TYPE_YESNO,
+                                      timeout = 15, default = True)
+
+    def manual_update_callback(self, confirmed):
+        if not confirmed:
+            return
+        try:
+            do_update()
+        except Exception, e:
+            print>>log, "[e2m3u2b] Error:", e
+
+
     def keyLeft(self):
         ConfigListScreen.keyLeft(self)
         self.new_config()
@@ -158,9 +176,10 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
         about = """
         IPTV for Enigma2 - E2m3u2bouquet plugin\n
         Multi provider IPTV bouquet maker for enigma2\n
-        This plugin is free and not be resold\n
-        """
-        self.session.open(MessageBox,_(about), type=MessageBox.TYPE_INFO)
+        This plugin is free and should not be resold\n
+        E2m3u2bouquet v{}
+        """.format(e2m3u2bouquet.__version__)
+        self.session.open(MessageBox,about, type=MessageBox.TYPE_INFO)
 
     def showLog(self):
         self.session.open(E2m3u2bLog)
@@ -231,7 +250,7 @@ class AutoStartTimer:
         if config.plugins.e2m3u2b.autobouquetupdate.value and config.plugins.e2m3u2b.updateinterval.value:
             interval = int(config.plugins.e2m3u2b.updateinterval.value)
             nowt = time.time()
-            return int(nowt) + (interval * 60)
+            return int(nowt) + (interval * 60 * 60)
         else:
             return -1
 
@@ -345,6 +364,7 @@ def Plugins(**kwargs):
             name = name,
             description = description,
             where = PluginDescriptor.WHERE_PLUGINMENU,
+            icon = 'e2m3ubouquetlogo.png',
             fnc = main
         )
     ]
