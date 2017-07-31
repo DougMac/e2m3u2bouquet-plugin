@@ -4,7 +4,6 @@ import sys
 import log
 import enigma
 
-#from enigma import getDesktop
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
 			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
@@ -34,7 +33,7 @@ def get_providers_list():
 # Set default configuration
 config.plugins.e2m3u2b = ConfigSubsection()
 config.plugins.e2m3u2b.autobouquetupdate = ConfigYesNo(default=False)
-config.plugins.e2m3u2b.updateinterval = ConfigSelectionNumber(default=5, min=5, max=24, stepwidth=1)
+config.plugins.e2m3u2b.updateinterval = ConfigSelectionNumber(default=6, min=2, max=48, stepwidth=1)
 config.plugins.e2m3u2b.autobouquetupdateatboot = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.providername = ConfigSelection(default='FAB', choices=get_providers_list())
 config.plugins.e2m3u2b.username = ConfigText(default='', fixed_size=False)
@@ -52,7 +51,7 @@ config.plugins.e2m3u2b.allbouquet = ConfigYesNo(default=False)
 
 class E2m3u2bConfig(ConfigListScreen, Screen):
     skin = """
-    <screen position="center,center" size="600,430" title="E2m3ubouquet Config">    
+    <screen position="center,center" size="600,430" title="IPTV Bouquet Maker Config">    
     <ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" transparent="1" alphatest="on" />
     <ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" transparent="1" alphatest="on" />
     <ePixmap pixmap="skin_default/buttons/yellow.png" position="280,0" size="140,40" transparent="1" alphatest="on" />
@@ -76,8 +75,7 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
                                     {
                                     'red': self.exit,
                                     'green': self.key_green,
-                                    'yellow': do_update,
-                                    # 'blue': self.key_blue,
+                                    'yellow': self.manual_update,
                                     'cancel': self.exit,
                                     'contextMenu': self.openMenu
                                     },-1)
