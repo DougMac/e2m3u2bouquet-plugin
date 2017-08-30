@@ -2,8 +2,8 @@ import time
 import os
 import sys
 import log
-import enigma
 
+from enigma import eTimer
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
 			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
@@ -40,13 +40,22 @@ config.plugins.e2m3u2b.username = ConfigText(default='', fixed_size=False)
 config.plugins.e2m3u2b.password = ConfigPassword(default='', fixed_size=False)
 config.plugins.e2m3u2b.iptvtypes = ConfigEnableDisable(default=False)
 config.plugins.e2m3u2b.multivod = ConfigEnableDisable(default=False)
+config.plugins.e2m3u2b.bouquetpos = ConfigSelection(default='bottom',
+                                                    choices=['bottom', 'top']
+                                                    )
+config.plugins.e2m3u2b.allbouquet = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.picons = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/picon/',
                                                   choices=['/usr/share/enigma2/picon/',
                                                            '/media/usb/picon/',
                                                            '/media/hdd/picon/',
+                                                           '/picon/'
                                                            ])
-config.plugins.e2m3u2b.allbouquet = ConfigYesNo(default=False)
+config.plugins.e2m3u2b.srefoverride = ConfigEnableDisable(default=False)
+
+config.plugins.e2m3u2b.bouquetdownload = ConfigEnableDisable(default=False)
+config.plugins.e2m3u2b.last_update = ConfigText()
+
 
 
 class E2m3u2bConfig(ConfigListScreen, Screen):
@@ -62,14 +71,16 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
     <widget name="key_blue" position="420,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
     <ePixmap position="562,30" size="35,25" pixmap="skin_default/buttons/key_menu.png" alphatest="on" />
     <widget name="config" position="10,60" size="590,300" scrollbarMode="showOnDemand" />
+    <widget name="statusbar" position="10,410" size="500,20" font="Regular;18" />    
     </screen>"""
 
     def __init__(self, session, args=None):
         self.session = session
         Screen.__init__(self, session)
-        self['key_red'] = Button(_('Cancel'))
-        self['key_green'] = Button(_('Save'))
-        self['key_yellow'] = Button(_('Run'))
+        self.skinName = ["EPGImportConfig", "EPGMainSetup"]
+        self['key_red'] = Button('Cancel')
+        self['key_green'] = Button('Save')
+        self['key_yellow'] = Button('Run')
         self['key_blue'] = Button()
         self['setupActions'] = ActionMap(['SetupActions', 'OkCancelActions', 'ColorActions', 'TimerEditActions', 'MovieSelectionActions'],
                                     {
@@ -79,9 +90,11 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
                                     'cancel': self.exit,
                                     'contextMenu': self.openMenu
                                     },-1)
+        self['statusbar'] = Label()
         ConfigListScreen.__init__(self, [], session=self.session)
         self.init_config()
         self.create_setup()
+        self.update_status()
 
     def init_config(self):
         def get_prev_values(section):
@@ -95,17 +108,20 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
 
         self.E2M3U2B = config.plugins.e2m3u2b
         self.prev_values = get_prev_values(self.E2M3U2B)
-        self.cfg_autobouquetupdate = getConfigListEntry(_('Automatic bouquet update (schedule):'),self.E2M3U2B.autobouquetupdate)
-        self.cfg_updateinterval = getConfigListEntry(_('Update interval (hours):'), self.E2M3U2B.updateinterval)
-        self.cfg_autobouquetupdateatboot = getConfigListEntry(_('Automatic bouquet update (when box starts):'),self.E2M3U2B.autobouquetupdateatboot)
-        self.cfg_providername = getConfigListEntry(_('Provider:'), self.E2M3U2B.providername)
-        self.cfg_username = getConfigListEntry(_('Username:'), self.E2M3U2B.username)
-        self.cfg_password = getConfigListEntry(_('Password:'), self.E2M3U2B.password)
-        self.cfg_iptvtypes = getConfigListEntry(_('All IPTV type:'), self.E2M3U2B.iptvtypes)
-        self.cfg_multivod = getConfigListEntry(_('Multi VOD:'), self.E2M3U2B.multivod)
-        self.cfg_picons = getConfigListEntry(_('Download picons:'), self.E2M3U2B.picons)
-        self.cfg_iconpath = getConfigListEntry(_('Picon save path:'), self.E2M3U2B.iconpath)
-        self.cfg_allbouquet = getConfigListEntry(_('Create all channels bouquet:'), self.E2M3U2B.allbouquet)
+        self.cfg_autobouquetupdate = getConfigListEntry('Automatic bouquet update (schedule):',self.E2M3U2B.autobouquetupdate)
+        self.cfg_updateinterval = getConfigListEntry('Update interval (hours):', self.E2M3U2B.updateinterval)
+        self.cfg_autobouquetupdateatboot = getConfigListEntry('Automatic bouquet update (when box starts):',self.E2M3U2B.autobouquetupdateatboot)
+        self.cfg_providername = getConfigListEntry('Provider:', self.E2M3U2B.providername)
+        self.cfg_username = getConfigListEntry('Username:', self.E2M3U2B.username)
+        self.cfg_password = getConfigListEntry('Password:', self.E2M3U2B.password)
+        self.cfg_iptvtypes = getConfigListEntry('All IPTV type:', self.E2M3U2B.iptvtypes)
+        self.cfg_multivod = getConfigListEntry('Multi VOD:', self.E2M3U2B.multivod)
+        self.cfg_bouquetpos = getConfigListEntry("IPTV bouquet position", self.E2M3U2B.bouquetpos)
+        self.cfg_allbouquet = getConfigListEntry('Create all channels bouquet:', self.E2M3U2B.allbouquet)
+        self.cfg_picons = getConfigListEntry('Download picons:', self.E2M3U2B.picons)
+        self.cfg_iconpath = getConfigListEntry('Picon save path:', self.E2M3U2B.iconpath)
+        self.cfg_srefoverride = getConfigListEntry("Override service refs", self.E2M3U2B.srefoverride)
+        self.cfg_bouquetdownload = getConfigListEntry("Check providers bouquet", self.E2M3U2B.bouquetdownload)
 
     def create_setup(self):
         list = [ self.cfg_autobouquetupdate ]
@@ -118,9 +134,12 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
         list.append(self.cfg_password)
         list.append(self.cfg_iptvtypes)
         list.append(self.cfg_multivod)
+        list.append(self.cfg_bouquetpos)
+        list.append(self.cfg_allbouquet)
         list.append(self.cfg_picons)
         list.append(self.cfg_iconpath)
-        list.append(self.cfg_allbouquet)
+        list.append(self.cfg_srefoverride)
+        list.append(self.cfg_bouquetdownload)
         self['config'].list = list
         self['config'].l.setList(list)
 
@@ -142,9 +161,9 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
     def manual_update(self):
         """Manual update
         """
-        self.session.openWithCallback(self.manual_update_callback, MessageBox, _("Update of channels will start.\n"
+        self.session.openWithCallback(self.manual_update_callback, MessageBox, "Update of channels will start.\n"
                                                                                    "This may take a few minutes.\n"
-                                                                                   "Proceed?"), MessageBox.TYPE_YESNO,
+                                                                                   "Proceed?", MessageBox.TYPE_YESNO,
                                       timeout = 15, default = True)
 
     def manual_update_callback(self, confirmed):
@@ -154,6 +173,7 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
             do_update()
         except Exception, e:
             print>>log, "[e2m3u2b] Error:", e
+        self.update_status()
 
 
     def keyLeft(self):
@@ -164,9 +184,13 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
         ConfigListScreen.keyRight(self)
         self.new_config()
 
+    def update_status(self):
+        if config.plugins.e2m3u2b.last_update:
+            self["statusbar"].setText('Last channel update: {}'.format(config.plugins.e2m3u2b.last_update.value))
+
     def openMenu(self):
-        menu = [(_('Show log'), self.showLog), (_('About'), self.showAbout)]
-        text = _('Select action')
+        menu = [('Show log', self.showLog), ('About', self.showAbout)]
+        text = 'Select action'
         def setAction(choice):
             if choice:
                 choice[1]()
@@ -208,7 +232,8 @@ class E2m3u2bLog(Screen):
     def __init__(self, session):
         self.session = session
         Screen.__init__(self, session)
-        self["key_red"] = Button(_("Clear"))
+        self.skinName = ["EPGImportLog", "XMLTVImportLog"]
+        self["key_red"] = Button("Clear")
         self["key_green"] = Button()
         self["key_yellow"] = Button()
         self["key_blue"] = Button()
@@ -241,7 +266,7 @@ class E2m3u2bLog(Screen):
 class AutoStartTimer:
     def __init__(self, session):
         self.session = session
-        self.timer = enigma.eTimer()
+        self.timer = eTimer()
         self.timer.callback.append(self.on_timer)
         self.update()
 
@@ -293,21 +318,28 @@ def do_update():
             sys.argv.append('-i')
         if config.plugins.e2m3u2b.multivod.value:
             sys.argv.append('-M')
-        if config.plugins.e2m3u2b.multivod.value:
-            sys.argv.append('-M')
+        if config.plugins.e2m3u2b.allbouquet.value:
+            sys.argv.append('-a')
         if config.plugins.e2m3u2b.picons.value:
             sys.argv.append('-P')
             sys.argv.append('-q={}'.format(config.plugins.e2m3u2b.iconpath.value))
-        if config.plugins.e2m3u2b.allbouquet.value:
-            sys.argv.append('-a')
+        if not config.plugins.e2m3u2b.srefoverride.value:
+            sys.argv.append('-xs')
+        if config.plugins.e2m3u2b.bouquetpos.value and config.plugins.e2m3u2b.bouquetpos.value == 'top' :
+            sys.argv.append('-bt')
+        if config.plugins.e2m3u2b.bouquetdownload.value:
+            sys.argv.append('-bd')
 
         # Call backend module with args
-        print>> log, '[e2m3u2b] Starting backend script - manual'
+        print>> log, '[e2m3u2b] Starting backend script'
         e2m3u2bouquet.main(sys.argv)
-        print>> log, '[e2m3u2b] Finished backend script - manual'
+        print>> log, '[e2m3u2b] Finished backend script'
+
+        localtime = time.asctime(time.localtime(time.time()))
+        config.plugins.e2m3u2b.last_update.value = localtime
+        config.plugins.e2m3u2b.last_update.save()
 
 def main(session, **kwargs):
-    print>>log, 'main'
     session.openWithCallback(done_configuring, E2m3u2bConfig)
 
 def done_configuring():
@@ -351,21 +383,21 @@ def Plugins(**kwargs):
 
     result = [
         PluginDescriptor(
-            name = name,
-            description = description,
-            where = [
+            name=name,
+            description=description,
+            where=[
                 PluginDescriptor.WHERE_AUTOSTART,
                 PluginDescriptor.WHERE_SESSIONSTART,
             ],
-            fnc = autostart,
-            wakeupfnc = get_next_wakeup
+            fnc=autostart,
+            wakeupfnc=get_next_wakeup
         ),
         PluginDescriptor(
-            name = name,
-            description = description,
-            where = PluginDescriptor.WHERE_PLUGINMENU,
-            icon = 'e2m3ubouquetlogo.png',
-            fnc = main
+            name=name,
+            description=description,
+            where=PluginDescriptor.WHERE_PLUGINMENU,
+            icon='e2m3ubouquetlogo.png',
+            fnc=main
         )
     ]
     return result

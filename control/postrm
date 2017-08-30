@@ -12,6 +12,7 @@ echo "Removing files"
 echo "********************************************"
 echo
 rm -r /usr/lib/enigma2/python/Plugins/Extensions/E2m3u2bouquet > /dev/null 2>&1
+rm -r /etc/enigma2/e2m3u2bouquet > /dev/null 2>&1
 find /etc/enigma2/ -type f -name '*suls_iptv*' -delete
 find /etc/epgimport/ -type f -name '*suls_iptv*' -delete
 echo
