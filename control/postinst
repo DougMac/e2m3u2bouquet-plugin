@@ -3,4 +3,8 @@ echo
 echo "********************************************"
 echo "Engima2 IPTV E2m3u2bouquet plugin installed"
 echo "********************************************"
+echo
+echo "********************************************"
+echo "Restart box to complete install"
+echo "********************************************"
 exit 0

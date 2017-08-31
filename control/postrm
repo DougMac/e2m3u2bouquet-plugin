@@ -21,8 +21,11 @@ echo "Engima2 IPTV E2m3u2bouquet plugin uninstalled"
 echo "********************************************"
 echo
 echo "********************************************"
-echo "Restarting Engima2 "
+echo "Restart box to complete uninstall"
 echo "********************************************"
-echo
-init 4; sleep 4; init 3
+#echo "********************************************"
+#echo "Restarting Engima2 "
+#echo "********************************************"
+#echo
+#init 4; sleep 4; init 3
 exit 0
