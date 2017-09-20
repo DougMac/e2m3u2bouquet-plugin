@@ -4,4 +4,7 @@ echo "********************************************"
 echo "Installing Engima2 IPTV E2m3u2bouquet plugin"
 echo "********************************************"
 echo
+if [ -d "/var/tmp/e2m3u2bouquet" ]; then
+  mv /var/tmp/e2m3u2bouquet /etc/enigma2 2>&1
+fi
 exit 0

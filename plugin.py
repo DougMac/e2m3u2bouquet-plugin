@@ -77,7 +77,7 @@ class E2m3u2bConfig(ConfigListScreen, Screen):
     def __init__(self, session, args=None):
         self.session = session
         Screen.__init__(self, session)
-        self.skinName = ["EPGImportConfig", "EPGMainSetup"]
+        self.skinName = ["E2m3u2bConfig", "EPGImportConfig", "EPGMainSetup"]
         self['key_red'] = Button('Cancel')
         self['key_green'] = Button('Save')
         self['key_yellow'] = Button('Run')
@@ -232,7 +232,7 @@ class E2m3u2bLog(Screen):
     def __init__(self, session):
         self.session = session
         Screen.__init__(self, session)
-        self.skinName = ["EPGImportLog", "XMLTVImportLog"]
+        self.skinName = ["E2m3u2bLog", "EPGImportLog", "XMLTVImportLog"]
         self["key_red"] = Button("Clear")
         self["key_green"] = Button()
         self["key_yellow"] = Button()
