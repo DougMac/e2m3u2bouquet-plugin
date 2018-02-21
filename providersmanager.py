@@ -195,9 +195,17 @@ def get_github_providers():
     return providers
 
 def get_providers_config():
-    configs = e2m3u2bouquet.config()
+    suppliers = {}
     if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
-        return configs.readconfig(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml'))
+        try:
+            # configs = e2m3u2bouquet.config()
+            suppliers = e2m3u2bouquet.config().readconfig(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml'))
+        except Exception, e:
+            print>> log, '[e2m3u2b] Unable to read config file'
+            if config.plugins.e2m3u2b.debug.value:
+                raise e
+    return suppliers
+
 
 def xml_escape(string):
     return string.replace("&", "&amp;") \

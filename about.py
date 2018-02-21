@@ -20,15 +20,16 @@ class E2m3u2b_About(Screen):
         self.session = session
         Screen.__init__(self, session)
         Screen.setTitle(self, "IPTV Bouquet Maker - About")
+        self.skinName = ['E2m3u2b_About', 'AutoBouquetsMaker_About']
 
         self["about"] = Label("")
         self["actions"] = ActionMap(["SetupActions", "ColorActions", "MenuActions"],
                                     {
-                                        "red": self.quit,
-                                        "cancel": self.quit,
-                                        "menu": self.quit
+                                        "red": self.keyCancel,
+                                        "cancel": self.keyCancel,
+                                        "menu": self.keyCancel
                                     }, -2)
-        self["key_red"] = Button("Exit")
+        self["key_red"] = Button("Close")
 
         credit = "IPTV Bouquet Maker Plugin v{}\n".format(e2m3u2bouquet.__version__)
         credit += "Doug Mackay, Dave Sully\n"
@@ -46,5 +47,5 @@ class E2m3u2b_About(Screen):
 
         self["about"].setText(credit)
 
-    def quit(self):
+    def keyCancel(self):
         self.close()
