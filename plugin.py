@@ -35,6 +35,8 @@ config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/pi
                                                            '/picon/'
                                                            ])
 config.plugins.e2m3u2b.last_update = ConfigText()
+config.plugins.e2m3u2b.last_provider_update = ConfigText(default='0')
+config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
 
 # legacy config
 config.plugins.e2m3u2b.providername = ConfigText(default='')
@@ -122,6 +124,10 @@ def do_update():
 
             if provider.iptv_types:
                 sys.argv.append('-i')
+            if provider.streamtype_tv:
+                sys.argv.append('-sttv={}'.format(provider.streamtype_tv))
+            if provider.streamtype_vod:
+                sys.argv.append('-stvod={}'.format(provider.streamtype_vod))
             if provider.multi_vod:
                 sys.argv.append('-M')
             if provider.all_bouquet:
@@ -213,4 +219,15 @@ def Plugins(**kwargs):
             fnc=main
         )
     ]
+
+    if config.plugins.e2m3u2b.extensions.value:
+        result.append(
+            PluginDescriptor(
+                name=name,
+                description=description,
+                where=PluginDescriptor.WHERE_EXTENSIONSMENU,
+                fnc=main
+            )
+        )
+
     return result

@@ -228,6 +228,11 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider_all_bouquet.value = self.provider.all_bouquet
         self.provider_iptv_types = ConfigEnableDisable(default=False)
         self.provider_iptv_types.value = self.provider.iptv_types
+        self.provider_streamtype_tv = ConfigSelection(default='', choices=[' ', '1', '4097', '5001', '5002'])
+        self.provider_streamtype_tv.value = self.provider.streamtype_tv
+        self.provider_streamtype_vod = ConfigSelection(default='', choices=[' ', '4097', '5001', '5002'])
+        self.provider_streamtype_vod.value = self.provider.streamtype_vod
+        # n.b. first option in stream type choice lists is an intentional single space
         self.provider_sref_override = ConfigEnableDisable(default=False)
         self.provider_sref_override.value = self.provider.sref_override
         self.provider_bouquet_download = ConfigEnableDisable(default=False)
@@ -258,6 +263,8 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry('Create all channels bouquet:', self.provider_all_bouquet, 'Create a bouquet containing all channels'))
                 if self.provider_settings_level.value == 'expert':
                     self.list.append(getConfigListEntry('All IPTV type:', self.provider_iptv_types, 'Normally should be left disabled. Setting to enabled may allow recording on some boxes. If you playback issues (e.g. stuttering on channels) set back to disabled'))
+                    self.list.append(getConfigListEntry('TV Stream Type:', self.provider_streamtype_tv, 'Stream type for TV services'))
+                    self.list.append(getConfigListEntry('VOD Stream Type:', self.provider_streamtype_vod, 'Stream type for VOD services'))
                     self.list.append(getConfigListEntry("Override service refs", self.provider_sref_override, 'Should be left disabled unless you need to use the override.xml to override service refs (e.g. for DVB to IPTV EPG mapping)'))
                     self.list.append(getConfigListEntry("Check providers bouquet", self.provider_bouquet_download, 'Enable this option to check and use providers custom service refs'))
 
@@ -277,18 +284,11 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             pass
 
     def keySave(self):
-
-        # TODO if delete is set to true or empty name show message box to confirm deletion
-        if self.provider_name.value == '' or self.provider_delete.value:
-            #self.providers_config.providers.pop(self.provider.name)
-            self.session.openWithCallback(self.delete_confirm, MessageBox, 'Confirm deletion of provider {}'.format(self.provider.name))
-
-
-
-        # if provider name is empty remove the provider from the dict
         previous_name = self.provider.name
-        #if self.provider_name.value == '':
-        #    self.providers_config.providers.pop(previous_name)
+
+        # if delete is set to true or empty name show message box to confirm deletion
+        if self.provider_name.value == '' or self.provider_delete.value:
+            self.session.openWithCallback(self.delete_confirm, MessageBox, 'Confirm deletion of provider {}'.format(previous_name))
         self.provider.enabled = self.provider_enabled.value
         self.provider.name = self.provider_name.value
         self.provider.settings_level = self.provider_settings_level.value
@@ -302,6 +302,8 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.provider.bouquet_top = True
         self.provider.all_bouquet = self.provider_all_bouquet.value
         self.provider.iptv_types = self.provider_iptv_types.value
+        self.provider.streamtype_tv = self.provider_streamtype_tv.value.strip()
+        self.provider.streamtype_vod = self.provider_streamtype_vod.value.strip()
         self.provider.sref_override = self.provider_sref_override.value
         self.provider.bouquet_download = self.provider_bouquet_download.value
 

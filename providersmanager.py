@@ -1,5 +1,9 @@
 import log
 import os
+import tempfile
+import ssl
+import urllib
+import time
 import e2m3u2bouquet
 
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
@@ -14,9 +18,12 @@ class ProviderConfigEntry():
     settings_level = 'simple'
     m3u_url = ''
     epg_url = ''
+    provider_update = ''
     username = ''
     password = ''
     iptv_types = False
+    streamtype_tv = ''
+    streamtype_vod = ''
     multi_vod = False
     all_bouquet = False
     picons = False
@@ -40,7 +47,7 @@ class ProvidersConfig():
             for provider_item in providers_list:
                 provider = providers_list[provider_item]
 
-                if provider['name']:
+                if provider.get('name'):
                     provider_entry = ProviderConfigEntry()
                     provider_entry.name = provider['name']
 
@@ -54,10 +61,16 @@ class ProvidersConfig():
                         provider_entry.epg_url = provider['epgurl']
                     if 'username' in provider:
                         provider_entry.username = provider['username']
+                    if 'providerupdate' in provider:
+                        provider_entry.provider_update = provider['providerupdate']
                     if 'password' in provider:
                         provider_entry.password = provider['password']
                     if 'iptvtypes' in provider and provider['iptvtypes'] == '1':
                         provider_entry.iptv_types = True
+                    if provider.get('streamtypetv'):
+                        provider_entry.streamtype_tv = provider['streamtypetv']
+                    if provider.get('streamtypevod'):
+                        provider_entry.streamtype_vod = provider['streamtypevod']
                     if 'multivod' in provider and provider['multivod'] == '1':
                         provider_entry.multi_vod = True
                     if 'allbouquet' in provider and provider['allbouquet'] == '1':
@@ -75,9 +88,13 @@ class ProvidersConfig():
 
                     self.providers[provider_entry.name] = provider_entry
 
+            if self.providers:
+                # check for provider update
+                self.provider_update()
+
     def migration(self):
         """Attempt to migrate settings from old version"""
-        print>> log, '[e2m3u2b] Migrating previous plugin settings...'.format(self.provider_name.value)
+        print>> log, '[e2m3u2b] Migrating previous plugin settings...'
 
         if config.plugins.e2m3u2b.providername.value:
             config_provider = config.plugins.e2m3u2b.providername.value
@@ -89,7 +106,6 @@ class ProvidersConfig():
                 git_provider = providers[config_provider]
                 print("git provider", git_provider)
                 if 'm3u' in git_provider:
-                    provider_config = ProvidersConfig()
                     provider_entry = ProviderConfigEntry()
                     provider_entry.enabled = True
                     provider_entry.name = config_provider
@@ -105,8 +121,8 @@ class ProvidersConfig():
                     provider_entry.sref_override = config.plugins.e2m3u2b.srefoverride.value
                     provider_entry.bouquet_download = config.plugins.e2m3u2b.bouquetdownload.value
 
-                    provider_config.providers[config_provider] = provider_entry
-                    provider_config.write()
+                    self.providers[config_provider] = provider_entry
+                    self.write()
 
                     # reset legacy config value to default values so they are removed from settings file
                     config.plugins.e2m3u2b.providername.value = ''
@@ -133,6 +149,82 @@ class ProvidersConfig():
                     #save cfglevel version
                     config.plugins.e2m3u2b.cfglevel.value = '1'
                     config.plugins.e2m3u2b.cfglevel.save()
+
+    def provider_update(self):
+        """Check for updated provider details"""
+        providers_updated = False
+        do_check = False
+
+        if int(time.time()) - int(config.plugins.e2m3u2b.last_provider_update.value) > 21600:
+            # wait at least 6 hours (21600s) between update checks
+            do_check = True
+
+        if self.providers and do_check:
+            for provider in self.providers:
+                provider_entry = self.providers[provider]
+
+                if provider_entry.name:
+                    if provider_entry.provider_update and provider_entry.username and provider_entry.password:
+                        new_details = self.process_provider_update(provider_entry.provider_update, provider_entry.name)
+                        if new_details:
+                            providers_updated = True
+                            provider_entry.name = new_details['name']
+                            provider_entry.m3u_url = new_details['m3u']
+                            if new_details.get('epg'):
+                                provider_entry.epg_url = new_details['epg']
+
+            if providers_updated:
+                config.plugins.e2m3u2b.last_provider_update.value = str(int(time.time()))
+                config.plugins.e2m3u2b.last_provider_update.save()
+                self.write()
+
+    def process_provider_update(self, url, providername):
+        """Downlaod provider update file from url"""
+        line = None
+        provider = None
+        downloaded = False
+
+        path = tempfile.gettempdir()
+        filename = os.path.join(path, 'provider-{}-update.txt'.format(providername))
+        print('\n----Downloading providers update file----')
+        print('provider update url = ', url)
+        try:
+            context = ssl._create_unverified_context()
+            urllib.urlretrieve(url, filename, context=context)
+            downloaded = True
+        except Exception:
+            pass    # fallback to no ssl context
+
+        if not downloaded:
+            try:
+                urllib.urlretrieve(url, filename)
+            except Exception, e:
+                print>> log, "[e2m3u2b] process_provider_update error. Type:", type(e)
+                print>> log, "[e2m3u2b] process_provider_update error: ", e
+                if config.plugins.e2m3u2b.debug.value:
+                    raise e
+
+        if os.path.isfile(filename):
+            try:
+                with open(filename, 'r') as f:
+                    line = f.readline().strip()
+                if line:
+                    provider_tmp = {
+                        'name': line.split(',')[0],
+                        'm3u': line.split(',')[1],
+                        'epg': line.split(',')[2],
+                    }
+                    # check we have name and m3u values
+                    if provider_tmp.get('name') and provider_tmp.get('m3u'):
+                        provider = provider_tmp
+            except IndexError, e:
+                print>> log, "[e2m3u2b] process_provider_update error unable to read providers update file"
+                if config.plugins.e2m3u2b.debug.value:
+                    raise e
+
+            if not config.plugins.e2m3u2b.debug.value:
+                os.remove(filename)
+        return provider
 
     def write(self):
         """Write providers to config file
@@ -163,7 +255,10 @@ class ProvidersConfig():
                     f.write('{}<epgurl><![CDATA[{}]]></epgurl><!-- XMLTV EPG url -->\r\n'.format(2 * indent, provider_entry.epg_url))
                     f.write('{}<username><![CDATA[{}]]></username><!-- (Optional) will replace USERNAME placeholder in urls -->\r\n'.format(2 * indent, provider_entry.username))
                     f.write('{}<password><![CDATA[{}]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r\n'.format(2 * indent, provider_entry.password))
+                    f.write('{}<providerupdate><![CDATA[{}]]></providerupdate><!-- (Optional) Provider update url -->\r\n'.format(2 * indent, provider_entry.provider_update))
                     f.write('{}<iptvtypes>{}</iptvtypes><!-- Change all TV streams to IPTV type (0 or 1) -->\r\n'.format(2 * indent, '1' if provider_entry.iptv_types else '0'))
+                    f.write('{}<streamtypetv>{}</streamtypetv><!-- (Optional) Custom TV stream type (e.g. 1, 4097, 5001 or 5002 -->\r\n'.format(2 * indent, provider_entry.streamtype_tv))
+                    f.write('{}<streamtypevod>{}</streamtypevod><!-- (Optional) Custom VOD stream type (e.g. 4097, 5001 or 5002 -->\r\n'.format(2 * indent, provider_entry.streamtype_vod))
                     f.write('{}<multivod>{}</multivod><!-- Split VOD into seperate categories (0 or 1) -->\r\n'.format(2 * indent, '1' if provider_entry.multi_vod else '0'))
                     f.write('{}<allbouquet>{}</allbouquet><!-- Create all channels bouquet (0 or 1) -->\r\n'.format(2 * indent, '1' if provider_entry.all_bouquet else '0'))
                     f.write('{}<picons>{}</picons><!-- Automatically download Picons (0 or 1) -->\r\n'.format(2 * indent, '1' if provider_entry.picons else '0'))
