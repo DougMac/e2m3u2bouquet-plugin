@@ -2,6 +2,7 @@ import time
 import os
 import sys
 import log
+import urllib
 import providersmanager as PM
 
 from menu import E2m3u2b_Menu
@@ -12,6 +13,7 @@ from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
              ConfigSelectionNumber
 from Plugins.Plugin import PluginDescriptor
+from Components.PluginComponent import plugins
 
 
 import e2m3u2bouquet
@@ -26,7 +28,9 @@ config.plugins.e2m3u2b = ConfigSubsection()
 config.plugins.e2m3u2b.cfglevel = ConfigText(default='')
 config.plugins.e2m3u2b.debug = ConfigEnableDisable(default=False)
 config.plugins.e2m3u2b.autobouquetupdate = ConfigYesNo(default=False)
+config.plugins.e2m3u2b.scheduletype = ConfigSelection(default='interval', choices=['interval', 'fixed time'])
 config.plugins.e2m3u2b.updateinterval = ConfigSelectionNumber(default=6, min=2, max=48, stepwidth=1)
+config.plugins.e2m3u2b.schedulefixedtime = ConfigClock(default=0)
 config.plugins.e2m3u2b.autobouquetupdateatboot = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/picon/',
                                                   choices=['/usr/share/enigma2/picon/',
@@ -37,6 +41,7 @@ config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/pi
 config.plugins.e2m3u2b.last_update = ConfigText()
 config.plugins.e2m3u2b.last_provider_update = ConfigText(default='0')
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
+
 
 # legacy config
 config.plugins.e2m3u2b.providername = ConfigText(default='')
@@ -62,41 +67,67 @@ class AutoStartTimer:
 
     def get_wake_time(self):
         print>> log, '[e2m3u2b] AutoStartTimer -> get_wake_time'
-        if config.plugins.e2m3u2b.autobouquetupdate.value and config.plugins.e2m3u2b.updateinterval.value:
-            interval = int(config.plugins.e2m3u2b.updateinterval.value)
-            nowt = time.time()
-            return int(nowt) + (interval * 60 * 60)
+        if config.plugins.e2m3u2b.autobouquetupdate.value:
+            if config.plugins.e2m3u2b.scheduletype.value == 'interval':
+                interval = int(config.plugins.e2m3u2b.updateinterval.value)
+                nowt = time.time()
+                # set next wakeup value to now + interval
+                return int(nowt) + (interval * 60 * 60)
+            elif config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
+                # convert the config clock to a time
+                fixed_time_clock = config.plugins.e2m3u2b.schedulefixedtime.value
+                now = time.localtime(time.time())
+
+                fixed_wake_time = int(time.mktime((now.tm_year, now.tm_mon, now.tm_mday, fixed_time_clock[0], \
+                                                   fixed_time_clock[1], now.tm_sec, now.tm_wday, now.tm_yday, now.tm_isdst)))
+                print('fixed schedule time: ', time.asctime(time.localtime(fixed_wake_time)))
+                return fixed_wake_time
         else:
             return -1
 
-    def update(self, atLeast = 0):
+    def update(self, atLeast=0):
         print>>log, '[e2m3u2b] AutoStartTimer -> update'
         self.timer.stop()
         wake = self.get_wake_time()
         nowt = time.time()
         now = int(nowt)
 
-        print>> log, '[e2m3u2b] AutoStartTimer -> update wake {} now {}'.format(wake, now)
-
         if wake > 0:
+            if wake < now + atLeast:
+                if config.plugins.e2m3u2b.scheduletype.value == 'interval':
+                    interval = int(config.plugins.e2m3u2b.updateinterval.value)
+                    wake += interval * 60 * 60 # add interval in hours if wake up time is in past
+                elif config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
+                    wake += 60 * 60 * 24 # add 1 day to fixed time if wake up time is in past
             next = wake - now
             self.timer.startLongTimer(next)
         else:
             wake = -1
+
+        # print>> log, '[e2m3u2b] next wake up time {} (now={})'.format(wake, now)
+        print>> log, '[e2m3u2b] next wake up time {} (now={})'.format(time.asctime(time.localtime(wake)), time.asctime(time.localtime(now)))
         return wake
 
     def on_timer(self):
         self.timer.stop()
         now = int(time.time())
+        wake = now
+        atLeast = 0
         print>> log, '[e2m3u2b] on_timer occured at {}'.format(now)
         print>> log, '[e2m3u2b] Stating bouquet update because auto update bouquet schedule is enabled'
-        try:
-            do_update()
-        except Exception, e:
-            print>> log, "[e2m3u2b] on_timer Error:", e
-            if config.plugins.e2m3u2b.debug.value:
-                raise e
-        self.update()
+
+        if config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
+            wake = self.get_wake_time()
+
+        #if close enough to wake time do bouquet update
+        if wake - now < 60:
+            try:
+                do_update()
+            except Exception, e:
+                print>> log, "[e2m3u2b] on_timer Error:", e
+                if config.plugins.e2m3u2b.debug.value:
+                    raise e
+        self.update(atLeast)
 
     def get_status(self):
         print>> log, '[e2m3u2b] AutoStartTimer -> getStatus'
@@ -119,8 +150,8 @@ def do_update():
                 sys.argv.append('-u={}'.format(provider.username))
             if provider.password:
                 sys.argv.append('-p={}'.format(provider.password))
-            sys.argv.append('-m={}'.format(provider.m3u_url.replace('USERNAME', provider.username).replace('PASSWORD', provider.password)))
-            sys.argv.append('-e={}'.format(provider.epg_url.replace('USERNAME', provider.username).replace('PASSWORD', provider.password)))
+            sys.argv.append('-m={}'.format(provider.m3u_url.replace('USERNAME', urllib.quote_plus(provider.username)).replace('PASSWORD', urllib.quote_plus(provider.password))))
+            sys.argv.append('-e={}'.format(provider.epg_url.replace('USERNAME', urllib.quote_plus(provider.username)).replace('PASSWORD', urllib.quote_plus(provider.password))))
 
             if provider.iptv_types:
                 sys.argv.append('-i')
@@ -142,7 +173,7 @@ def do_update():
             if provider.bouquet_download:
                 sys.argv.append('-bd')
             if provider.bouquet_url:
-                sys.argv.append('-b={}'.format(provider.bouquet_url.replace('USERNAME', provider.username).replace('PASSWORD', provider.password)))
+                sys.argv.append('-b={}'.format(provider.bouquet_url.replace('USERNAME', urllib.quote_plus(provider.username)).replace('PASSWORD', urllib.quote_plus(provider.password))))
 
             # Call backend module with args
             print>> log, '[e2m3u2b] Starting backend script'
@@ -154,7 +185,7 @@ def do_update():
             config.plugins.e2m3u2b.last_update.save()
 
 def main(session, **kwargs):
-    session.openWithCallback(done_configuring, E2m3u2b_Menu)
+    session.open(E2m3u2b_Menu)
 
 def done_configuring():
     """Check for new config values for auto start
@@ -177,6 +208,7 @@ def on_boot_start_check():
         if config.plugins.e2m3u2b.debug.value:
             raise e
 
+
 def autostart(reason, session=None, **kwargs):
     # these globals need declared as they are reassigned here
     global autoStartTimer
@@ -190,20 +222,44 @@ def autostart(reason, session=None, **kwargs):
                 autoStartTimer = AutoStartTimer(session)
             if config.plugins.e2m3u2b.autobouquetupdateatboot.value:
                 on_boot_start_check()
+    else:
+        print>>log, '[e2m3u2b] stop'
+
 
 def get_next_wakeup():
     # don't enable waking from deep standby for now
     print>> log, '[e2m3u2b] get_next_wakeup'
     return -1
 
-def Plugins(**kwargs):
-    name = 'IPTV Bouquet Maker'
-    description = 'IPTV for Enigma2 - E2m3u2bouquet plugin'
 
+def extensions_menu(session, **kwargs):
+    """ Needed for the extension menu descriptor
+    """
+    main(session, **kwargs)
+
+
+def update_extensions_menu(cfg_el):
+    print>> log, '[e2m3u2b] update extensions menu'
+    try:
+        if cfg_el.value:
+            plugins.addPlugin(extDescriptor)
+        else:
+            plugins.removePlugin(extDescriptor)
+    except Exception, e:
+        print>> log, '[e2m3u2b] Failed to update extensions menu: ', e
+
+plugin_name = 'IPTV Bouquet Maker'
+plugin_description = 'IPTV for Enigma2 - E2m3u2bouquet plugin'
+print('[e2m3u2b]add notifier')
+extDescriptor = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=extensions_menu)
+config.plugins.e2m3u2b.extensions.addNotifier(update_extensions_menu, initial_call=False)
+
+
+def Plugins(**kwargs):
     result = [
         PluginDescriptor(
-            name=name,
-            description=description,
+            name=plugin_name,
+            description=plugin_description,
             where=[
                 PluginDescriptor.WHERE_AUTOSTART,
                 PluginDescriptor.WHERE_SESSIONSTART,
@@ -212,8 +268,8 @@ def Plugins(**kwargs):
             wakeupfnc=get_next_wakeup
         ),
         PluginDescriptor(
-            name=name,
-            description=description,
+            name=plugin_name,
+            description=plugin_description,
             where=PluginDescriptor.WHERE_PLUGINMENU,
             icon='e2m3ubouquetlogo.png',
             fnc=main
@@ -221,13 +277,5 @@ def Plugins(**kwargs):
     ]
 
     if config.plugins.e2m3u2b.extensions.value:
-        result.append(
-            PluginDescriptor(
-                name=name,
-                description=description,
-                where=PluginDescriptor.WHERE_EXTENSIONSMENU,
-                fnc=main
-            )
-        )
-
+         result.append(extDescriptor)
     return result

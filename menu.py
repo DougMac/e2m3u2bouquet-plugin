@@ -172,7 +172,11 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 
         self.list.append(getConfigListEntry('Automatic bouquet update (schedule):', config.plugins.e2m3u2b.autobouquetupdate, 'Enable to update bouquets on a schedule'))
         if config.plugins.e2m3u2b.autobouquetupdate.getValue():
-            self.list.append(getConfigListEntry(indent + 'Update interval (hours):', config.plugins.e2m3u2b.updateinterval, 'Set the number of hours between automatic bouquet updates'))
+            self.list.append(getConfigListEntry(indent + "Schedule type:", config.plugins.e2m3u2b.scheduletype, 'Choose either a fixed time or an hourly update interval'))
+            if config.plugins.e2m3u2b.scheduletype.value == 'interval':
+                self.list.append(getConfigListEntry(2 * indent + 'Update interval (hours):', config.plugins.e2m3u2b.updateinterval, 'Set the number of hours between automatic bouquet updates'))
+            if config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
+                self.list.append(getConfigListEntry(2 * indent + 'Time to start update:', config.plugins.e2m3u2b.schedulefixedtime, 'Set the day of time to perform the bouquet update'))
         # leave update at boot disabled for now
         # self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
         self.list.append(getConfigListEntry('Picon save path:', config.plugins.e2m3u2b.iconpath, 'Select where to save picons (if download is enabled)'))
