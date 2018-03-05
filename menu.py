@@ -123,7 +123,7 @@ class E2m3u2b_Menu(Screen):
         except Exception, e:
             print>> log, "[e2m3u2b] manual_update_callback Error:", e
             if config.plugins.e2m3u2b.debug.value:
-                raise e
+                raise
 
     def keyCancel(self):
         self.close()

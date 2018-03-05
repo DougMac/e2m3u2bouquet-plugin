@@ -1,5 +1,6 @@
 import time
 import os
+import errno
 import sys
 import log
 import urllib
@@ -126,7 +127,7 @@ class AutoStartTimer:
             except Exception, e:
                 print>> log, "[e2m3u2b] on_timer Error:", e
                 if config.plugins.e2m3u2b.debug.value:
-                    raise e
+                    raise
         self.update(atLeast)
 
     def get_status(self):
@@ -185,7 +186,19 @@ def do_update():
             config.plugins.e2m3u2b.last_update.save()
 
 def main(session, **kwargs):
+    check_cfg_folder()
     session.open(E2m3u2b_Menu)
+
+def check_cfg_folder():
+    """Make config folder if it doesn't exist
+    """
+    try:
+        os.makedirs(e2m3u2bouquet.CFGPATH)
+    except OSError, e:      # race condition guard
+        if e.errno != errno.EEXIST:
+            print>> log, "[e2m3u2b] unable to create config dir:", e
+            if config.plugins.e2m3u2b.debug.value:
+                raise
 
 def done_configuring():
     """Check for new config values for auto start
@@ -206,7 +219,7 @@ def on_boot_start_check():
     except Exception, e:
         print>> log, "[e2m3u2b] on_boot_start_check Error:", e
         if config.plugins.e2m3u2b.debug.value:
-            raise e
+            raise
 
 
 def autostart(reason, session=None, **kwargs):

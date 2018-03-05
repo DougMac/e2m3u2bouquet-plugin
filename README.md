@@ -15,7 +15,7 @@ Plugin fronted for e2m3u2bouquet (Enigma2 IPTV m3u parser and bouquet creator)
 
 #### v0.7.1
 * Multi custom provider support
-* Config file based setup (vlaues can be edited in an xml files instead 
+* Config file based setup (values can be edited in an xml file instead)
 of entered using the remote
 * Provider managed update system
 * Fixed time schedule type

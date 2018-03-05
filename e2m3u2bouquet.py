@@ -12,6 +12,7 @@ e2m3u2bouquet.e2m3u2bouquet -- Enigma2 IPTV m3u to bouquet parser
 
 import sys
 import os
+import errno
 import re
 import unicodedata
 import datetime
@@ -38,9 +39,9 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
 __all__ = []
-__version__ = '0.7.1'
+__version__ = '0.7.2'
 __date__ = '2017-06-04'
-__updated__ = '2018-02-27'
+__updated__ = '2018-03-02'
 
 DEBUG = 0
 TESTRUN = 0
@@ -105,7 +106,8 @@ class IPTVSetup:
             bakfile.close()
             tvfile.close()
         except Exception, e:
-            raise e
+            print('Unable to uninstall')
+            raise
         print('----Uninstall complete----')
 
     def download_m3u(self, url):
@@ -118,7 +120,8 @@ class IPTVSetup:
         try:
             urllib.urlretrieve(url, filename)
         except Exception, e:
-            raise e
+            print('Unable to download m3u file from url')
+            raise
         return filename
 
     def download_providers(self, url):
@@ -139,7 +142,8 @@ class IPTVSetup:
             urllib.urlretrieve(url, filename)
             return filename
         except Exception, e:
-            raise e
+            print('Unable to download Github providers')
+            raise
 
     def download_bouquet(self, url):
         """Download panel bouquet file from url"""
@@ -151,7 +155,8 @@ class IPTVSetup:
         try:
            urllib.urlretrieve(url, filename)
         except Exception, e:
-           raise e
+            print('Unable to download providers panel bouquet file')
+            raise
         return filename
 
     def parse_panel_bouquet(self, panel_bouquet_file):
@@ -193,7 +198,7 @@ class IPTVSetup:
             if not os.path.getsize(filename):
                 raise Exception("M3U file is empty. Check username & password")
         except Exception, e:
-            raise e
+            raise
 
         category_order = []
         category_options = {}
@@ -602,8 +607,11 @@ class IPTVSetup:
     def download_picons(self, dictchannels, iconpath):
         print('\n----Downloading Picon files, please be patient----')
         print('If no Picons exist this will take a few minutes')
-        if not os.path.isdir(iconpath):
+        try:
             os.makedirs(iconpath)
+        except OSError, e:  # race condition guard
+            if e.errno != errno.EEXIST:
+                raise
 
         for cat in dictchannels:
             if not cat.startswith('VOD'):
@@ -916,8 +924,11 @@ class IPTVSetup:
         if DEBUG:
             print('creating EPGImporter config')
         # create channels file
-        if not os.path.isdir(EPGIMPORTPATH):
+        try:
             os.makedirs(EPGIMPORTPATH)
+        except OSError, e:  # race condition guard
+            if e.errno != errno.EEXIST:
+                raise
         channels_filename = os.path.join(EPGIMPORTPATH, 'suls_iptv_{}_channels.xml'.format(self.get_safe_filename(provider)))
 
         if dictchannels:
@@ -979,7 +990,7 @@ class IPTVSetup:
             if not os.path.getsize(providerfile):
                 raise Exception('Providers file is empty')
         except Exception, e:
-            raise e
+            raise
         with open(providerfile, "r") as f:
             for line in f:
                 if line == '400: Invalid request\n':
@@ -1093,8 +1104,8 @@ class config:
     <supplier>\r
         <name>Supplier Name 1</name><!-- Supplier Name -->\r
         <enabled>1</enabled><!-- Enable or disable the supplier (0 or 1) -->\r
-        <m3uurl><![CDATA[http://address.yourprovider.com:80/get.php?username=YOURUSERNAME&password=YOURPASSWORD&type=m3u_plus&output=ts]]></m3uurl><!-- Extended M3U url -->\r
-        <epgurl><![CDATA[http://address.yourprovider.com:80/xmltv.php?username=YOURUSERNAME&password=YOURPASSWORD]]></epgurl><!-- XMLTV EPG url -->\r
+        <m3uurl><![CDATA[http://address.yourprovider.com:80/get.php?username=USERNAME&password=PASSWORD&type=m3u_plus&output=ts]]></m3uurl><!-- Extended M3U url -->\r
+        <epgurl><![CDATA[http://address.yourprovider.com:80/xmltv.php?username=USERNAME&password=PASSWORD]]></epgurl><!-- XMLTV EPG url -->\r
         <username><![CDATA[]]></username><!-- (Optional) will replace USERNAME placeholder in urls -->\r
         <password><![CDATA[]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r
         <iptvtypes>0</iptvtypes><!-- Change all streams to IPTV type (0 or 1) -->\r
@@ -1112,8 +1123,8 @@ class config:
     <supplier>\r
         <name>Supplier Name</name><!-- Supplier Name -->\r
         <enabled>0</enabled><!-- Enable or disable the supplier (0 or 1) -->\r
-        <m3uurl><![CDATA[http://address.yourprovider.com:80/get.php?username=YOURUSERNAME&password=YOURPASSWORD&type=m3u_plus&output=ts]]></m3uurl><!-- Extended M3U url -->\r
-        <epgurl><![CDATA[http://address.yourprovider.com:80/xmltv.php?username=YOURUSERNAME&password=YOURPASSWORD]]></epgurl><!-- XMLTV EPG url -->\r
+        <m3uurl><![CDATA[http://address.yourprovider.com:80/get.php?username=USERNAME&password=PASSWORD&type=m3u_plus&output=ts]]></m3uurl><!-- Extended M3U url -->\r
+        <epgurl><![CDATA[http://address.yourprovider.com:80/xmltv.php?username=USERNAME&password=PASSWORD]]></epgurl><!-- XMLTV EPG url -->\r
         <username><![CDATA[]]></username><!-- (Optional) will replace USERNAME placeholder in urls -->\r
         <password><![CDATA[]]></password><!-- (Optional) will replace PASSWORD placeholder in urls -->\r
         <iptvtypes>0</iptvtypes><!-- Change all streams to IPTV type (0 or 1) -->\r
@@ -1331,8 +1342,11 @@ USAGE
         sys.exit(1)  # Quit here if we just want to uninstall
     else:
         # create config folder if it doesn't exist
-        if not os.path.isdir(CFGPATH):
+        try:
             os.makedirs(CFGPATH)
+        except OSError, e:      # race condition guard
+            if e.errno != errno.EEXIST:
+                raise
 
         # Work out provider based setup if that's what we have
         if (provider is not None) and m3uurl is None and ((username is not None) or (password is not None)):
