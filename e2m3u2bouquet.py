@@ -39,9 +39,9 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
 __all__ = []
-__version__ = '0.7.2'
+__version__ = '0.7.3'
 __date__ = '2017-06-04'
-__updated__ = '2018-03-02'
+__updated__ = '2018-03-07'
 
 DEBUG = 0
 TESTRUN = 0
@@ -66,12 +66,14 @@ class CLIError(Exception):
     def __unicode__(self):
         return self.msg
 
+
 class AppUrlOpener(urllib.FancyURLopener):
     """Set user agent for downloads"""
     version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
 
+
 class IPTVSetup:
-    def __init__(self):
+    def display_welcome(self):
         # welcome message
         print('\n********************************')
         print('Starting Engima2 IPTV bouquets v{}'.format(__version__))
@@ -1194,6 +1196,7 @@ class config:
             # Re-call ourselves
             main(newargs)
 
+
 def main(argv=None):  # IGNORE:C0111
     # Command line options.
     if argv is None:
@@ -1259,7 +1262,6 @@ USAGE
         parser.add_argument('-U', '--uninstall', dest='uninstall', action='store_true',
                             help='Uninstall all changes made by this script')
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
-
 
         # Process arguments
         args = parser.parse_args()
@@ -1333,6 +1335,7 @@ USAGE
     # # Core program logic starts here
     urllib._urlopener = AppUrlOpener()
     e2m3uSetup = IPTVSetup()
+    e2m3uSetup.display_welcome()
     if uninstall:
         # Clean up any existing files
         e2m3uSetup.uninstaller()
@@ -1384,7 +1387,7 @@ USAGE
         # save xml mapping - should be after m3u parsing
         e2m3uSetup.save_map_xml(categoryorder, category_options, dictchannels, list_xmltv_sources, provider)
 
-        #download picons
+        # Download picons
         if picons:
             e2m3uSetup.download_picons(dictchannels, iconpath)
         # Create bouquet files

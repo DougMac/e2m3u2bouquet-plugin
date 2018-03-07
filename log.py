@@ -1,4 +1,4 @@
-# logging for XMLTV importer
+# logging
 #
 # One can simply use
 # import log

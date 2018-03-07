@@ -20,3 +20,7 @@ of entered using the remote
 * Provider managed update system
 * Fixed time schedule type
 * Option for custom stream type for TV and VOD
+
+#### v0.7.3
+* Fix issue where main screen showing no text on some skins
+* Add option to reset bouquets

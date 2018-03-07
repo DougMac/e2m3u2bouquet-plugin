@@ -41,6 +41,7 @@ class E2m3u2b_Providers(Screen):
                     {"template": [
                         MultiContentEntryPixmapAlphaTest(pos = (10, 0), size = (32, 32), png = 0),
                         MultiContentEntryText(pos = (47, 0), size = (400, 30), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 1),
+                        MultiContentEntryText(pos = (450, 0), size = (120, 30), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 2),                                            
                         ],
                         "fonts": [gFont("Regular",22)],
                         "itemHeight": 30
@@ -56,7 +57,7 @@ class E2m3u2b_Providers(Screen):
         Screen.__init__(self, session)
         self.session = session
         Screen.setTitle(self, "IPTV Bouquet Maker - Providers")
-        self.skinName = ['E2m3u2b_Providers', 'AutoBouquetsMaker_Providers']
+        self.skinName = ['E2m3u2b_Providers', 'AutoBouquetsMaker_HideSections']
 
         self.drawList = []
         self["list"] = List(self.drawList)
@@ -124,7 +125,7 @@ class E2m3u2b_Providers(Screen):
             except:
                 pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_CURRENT_SKIN, 'skin_default/icons/lock_off.png'))
 
-        return (pixmap, str(name))
+        return (pixmap, str(name), '')
 
     def refresh(self):
         self.drawList = []

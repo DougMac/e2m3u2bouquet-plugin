@@ -185,6 +185,16 @@ def do_update():
             config.plugins.e2m3u2b.last_update.value = localtime
             config.plugins.e2m3u2b.last_update.save()
 
+def do_reset():
+    """Reset bouquets and
+    epg importer config by running the script uninstall method
+    """
+    print('do_reset called')
+
+    iptv = e2m3u2bouquet.IPTVSetup()
+    iptv.uninstaller()
+
+
 def main(session, **kwargs):
     check_cfg_folder()
     session.open(E2m3u2b_Menu)
@@ -284,7 +294,7 @@ def Plugins(**kwargs):
             name=plugin_name,
             description=plugin_description,
             where=PluginDescriptor.WHERE_PLUGINMENU,
-            icon='e2m3ubouquetlogo.png',
+            icon='images/e2m3ubouquetlogo.png',
             fnc=main
         )
     ]

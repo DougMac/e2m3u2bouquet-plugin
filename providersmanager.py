@@ -32,11 +32,14 @@ class ProviderConfigEntry():
     bouquet_download = False
     bouquet_top = False
 
+
 class ProvidersConfig():
-    providers = {}
+    def __init__(self):
+        self.providers = {}
 
     def read(self):
         """Read providers from config file"""
+        self.providers = {}
 
         # check if we need to migrate previous version setting
         if config.plugins.e2m3u2b.cfglevel.value != '1' and not os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):

@@ -7,8 +7,10 @@ echo
 if [ -d "/var/tmp/e2m3u2bouquet" ]; then
   mv /var/tmp/e2m3u2bouquet /etc/enigma2 2>&1
 fi
-if [ -f "/var/tmp/config.xml" -a ! -f "/etc/enigma2/e2m3u2bouquet/config.xml" ]; then  
+if [ ! -d "/etc/enigma2/e2m3u2bouquet/" ]; then
   mkdir -p /etc/enigma2/e2m3u2bouquet/ 2>&1
+fi
+if [ -f "/var/tmp/config.xml" -a ! -f "/etc/enigma2/e2m3u2bouquet/config.xml" ]; then    
   mv  /var/tmp/config.xml /etc/enigma2/e2m3u2bouquet/ 2>&1
 fi
 exit 0
