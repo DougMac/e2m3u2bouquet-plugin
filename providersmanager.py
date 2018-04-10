@@ -11,6 +11,8 @@ from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
              ConfigSelectionNumber
 
+from collections import OrderedDict
+
 
 class ProviderConfigEntry():
     name = ''
@@ -35,11 +37,11 @@ class ProviderConfigEntry():
 
 class ProvidersConfig():
     def __init__(self):
-        self.providers = {}
+        self.providers = OrderedDict()
 
     def read(self):
         """Read providers from config file"""
-        self.providers = {}
+        self.providers = OrderedDict()
 
         # check if we need to migrate previous version setting
         if config.plugins.e2m3u2b.cfglevel.value != '1' and not os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
@@ -292,8 +294,9 @@ def get_github_providers():
             raise
     return providers
 
+
 def get_providers_config():
-    suppliers = {}
+    suppliers = OrderedDict()
     if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
         try:
             # configs = e2m3u2bouquet.config()
@@ -302,6 +305,7 @@ def get_providers_config():
             print>> log, '[e2m3u2b] Unable to read config file'
             if config.plugins.e2m3u2b.debug.value:
                 raise
+
     return suppliers
 
 

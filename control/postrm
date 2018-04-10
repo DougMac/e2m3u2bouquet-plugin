@@ -5,7 +5,7 @@ echo "********************************************"
 echo
 cd /etc/enigma2/
 sed -i '/suls_iptv/d' bouquets.tv
-rm bouquets.tv.bak
+rm -f bouquets.tv.bak
 echo
 echo "********************************************"
 echo "Removing files"

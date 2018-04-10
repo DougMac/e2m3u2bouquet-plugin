@@ -24,3 +24,9 @@ of entered using the remote
 #### v0.7.3
 * Fix issue where main screen showing no text on some skins
 * Add option to reset bouquets
+
+#### v0.7.4
+* Extra checking to ensure that logos are actually images
+* Keep provider order from config file
+* Reload bouquets after bouquet reset
+* Fix bouquet top option always reverting to top

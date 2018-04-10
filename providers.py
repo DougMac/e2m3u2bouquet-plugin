@@ -130,7 +130,7 @@ class E2m3u2b_Providers(Screen):
     def refresh(self):
         self.drawList = []
 
-        for provider in sorted(self.providers_config.providers):
+        for provider in self.providers_config.providers:
             self.drawList.append(self.buildListEntry(self.providers_config.providers[provider].enabled, provider))
         self['list'].setList(self.drawList)
 
@@ -301,6 +301,8 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         self.provider.picons = self.provider_picons.value
         if self.provider_bouquet_pos.value == 'top':
             self.provider.bouquet_top = True
+        else:
+            self.provider.bouquet_top = False
         self.provider.all_bouquet = self.provider_all_bouquet.value
         self.provider.iptv_types = self.provider_iptv_types.value
         self.provider.streamtype_tv = self.provider_streamtype_tv.value.strip()

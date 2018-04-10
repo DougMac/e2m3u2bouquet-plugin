@@ -193,6 +193,7 @@ def do_reset():
 
     iptv = e2m3u2bouquet.IPTVSetup()
     iptv.uninstaller()
+    iptv.reload_bouquets()
 
 
 def main(session, **kwargs):
