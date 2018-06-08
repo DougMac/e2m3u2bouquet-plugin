@@ -13,6 +13,7 @@ from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
 			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
              ConfigSelectionNumber
+from Screens.MessageBox import MessageBox
 from Plugins.Plugin import PluginDescriptor
 from Components.PluginComponent import plugins
 
@@ -42,6 +43,7 @@ config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/pi
 config.plugins.e2m3u2b.last_update = ConfigText()
 config.plugins.e2m3u2b.last_provider_update = ConfigText(default='0')
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
+config.plugins.e2m3u2b.mainmenu = ConfigYesNo(default=False)
 
 
 # legacy config
@@ -255,28 +257,65 @@ def get_next_wakeup():
     print>> log, '[e2m3u2b] get_next_wakeup'
     return -1
 
+def menuHook(menuid):
+    """ Called whenever a menu is created"""
+    if menuid == "mainmenu":
+        return [(plugin_name, quick_import_menu, plugin_name, 45)]
+    return[]
+
 
 def extensions_menu(session, **kwargs):
     """ Needed for the extension menu descriptor
     """
     main(session, **kwargs)
 
+def quick_import_menu(session, **kwargs):
+    session.openWithCallback(quick_import_callback, MessageBox, "Update of channels will start.\n"
+                                                                            "This may take a few minutes.\n"
+                                                                            "Proceed?", MessageBox.TYPE_YESNO,
+                                   timeout=15, default=True)
+
+
+def quick_import_callback(confirmed):
+    if not confirmed:
+        return
+    try:
+        do_update()
+    except Exception, e:
+        print>> log, "[e2m3u2b] manual_update_callback Error:", e
+        if config.plugins.e2m3u2b.debug.value:
+            raise
+
 
 def update_extensions_menu(cfg_el):
     print>> log, '[e2m3u2b] update extensions menu'
     try:
         if cfg_el.value:
-            plugins.addPlugin(extDescriptor)
+            plugins.addPlugin(extDescriptorQuick)
         else:
-            plugins.removePlugin(extDescriptor)
+            plugins.removePlugin(extDescriptorQuick)
     except Exception, e:
         print>> log, '[e2m3u2b] Failed to update extensions menu: ', e
+
+
+def update_main_menu(cfg_el):
+    print>> log, '[e2m3u2b] update main menu'
+    try:
+        if cfg_el.value:
+            plugins.addPlugin(extDescriptorQuickMain)
+        else:
+            plugins.removePlugin(extDescriptorQuickMain)
+    except Exception, e:
+        print>> log, '[e2m3u2b] Failed to update main menu: ', e
 
 plugin_name = 'IPTV Bouquet Maker'
 plugin_description = 'IPTV for Enigma2 - E2m3u2bouquet plugin'
 print('[e2m3u2b]add notifier')
 extDescriptor = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=extensions_menu)
+extDescriptorQuick = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=quick_import_menu)
+extDescriptorQuickMain = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_MENU, fnc=menuHook)
 config.plugins.e2m3u2b.extensions.addNotifier(update_extensions_menu, initial_call=False)
+config.plugins.e2m3u2b.mainmenu.addNotifier(update_main_menu, initial_call=False)
 
 
 def Plugins(**kwargs):
@@ -297,9 +336,18 @@ def Plugins(**kwargs):
             where=PluginDescriptor.WHERE_PLUGINMENU,
             icon='images/e2m3ubouquetlogo.png',
             fnc=main
-        )
+        )#,
+        #PluginDescriptor(
+        #    name=plugin_name,
+        #    description=plugin_description,
+        #    where=PluginDescriptor.WHERE_MENU,
+        #    icon='images/e2m3ubouquetlogo.png',
+        #    fnc=menuHook
+        #)
     ]
 
     if config.plugins.e2m3u2b.extensions.value:
-         result.append(extDescriptor)
+        result.append(extDescriptorQuick)
+    if config.plugins.e2m3u2b.mainmenu.value:
+        result.append(extDescriptorQuickMain)
     return result

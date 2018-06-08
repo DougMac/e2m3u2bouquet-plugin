@@ -77,6 +77,7 @@ class E2m3u2b_Menu(Screen):
 
         self.createSetup()
 
+
     def createSetup(self):
         l = [self.build_list_entry('Configure'),
              self.build_list_entry('Providers'),
@@ -211,6 +212,7 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
         # self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
         self.list.append(getConfigListEntry('Picon save path:', config.plugins.e2m3u2b.iconpath, 'Select where to save picons (if download is enabled)'))
         self.list.append(getConfigListEntry('Show in extensions:', config.plugins.e2m3u2b.extensions, 'Show in extensions menu'))
+        self.list.append(getConfigListEntry('Show in main menu:', config.plugins.e2m3u2b.mainmenu, 'Show in main menu'))
         self.list.append(getConfigListEntry('Debug mode:', config.plugins.e2m3u2b.debug, 'Enable debug mode. Do not enable unless requested'))
 
         self['config'].list = self.list

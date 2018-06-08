@@ -30,3 +30,7 @@ of entered using the remote
 * Keep provider order from config file
 * Reload bouquets after bouquet reset
 * Fix bouquet top option always reverting to top
+
+#### v0.7.5
+* Changed show in extensions option to a quick launch
+* Added show in main menu quick launch
