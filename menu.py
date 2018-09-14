@@ -81,7 +81,7 @@ class E2m3u2b_Menu(Screen):
     def createSetup(self):
         l = [self.build_list_entry('Configure'),
              self.build_list_entry('Providers'),
-             self.build_list_entry('Run'),
+             self.build_list_entry('Create Bouquets'),
              self.build_list_entry('Status'),
              self.build_list_entry('Reset Bouquets'),
              self.build_list_entry('Show Log'),

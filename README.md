@@ -34,3 +34,7 @@ of entered using the remote
 #### v0.7.5
 * Changed show in extensions option to a quick launch
 * Added show in main menu quick launch
+
+#### v0.7.6
+* Change 'Run' to 'Create Bouquets'
+* Add additional picon save locations
