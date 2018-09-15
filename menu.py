@@ -200,7 +200,8 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
         self.editListEntry = None
         self.list = []
         indent = '- '
-
+		
+        self.list.append(getConfigListEntry('Automatic bouquet update (boot):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Enable to update bouquets on boot'))
         self.list.append(getConfigListEntry('Automatic bouquet update (schedule):', config.plugins.e2m3u2b.autobouquetupdate, 'Enable to update bouquets on a schedule'))
         if config.plugins.e2m3u2b.autobouquetupdate.getValue():
             self.list.append(getConfigListEntry(indent + "Schedule type:", config.plugins.e2m3u2b.scheduletype, 'Choose either a fixed time or an hourly update interval'))
