@@ -32,6 +32,11 @@ except:
     pass
 from Tools.LoadPixmap import LoadPixmap
 
+try:
+    import EPGImport
+except ImportError:
+    EPGImport = None
+
 
 class E2m3u2b_Menu(Screen):
     skin = """
@@ -87,6 +92,7 @@ class E2m3u2b_Menu(Screen):
              self.build_list_entry('Show Log'),
              self.build_list_entry('About')]
         self['list'].list = l
+
 
     def build_list_entry(self, description):
         pixmap = LoadPixmap(cached=True, path='{}/images/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'blank.png'))
@@ -208,8 +214,7 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry(2 * indent + 'Update interval (hours):', config.plugins.e2m3u2b.updateinterval, 'Set the number of hours between automatic bouquet updates'))
             if config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
                 self.list.append(getConfigListEntry(2 * indent + 'Time to start update:', config.plugins.e2m3u2b.schedulefixedtime, 'Set the day of time to perform the bouquet update'))
-        # leave update at boot disabled for now
-        # self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
+        self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
         self.list.append(getConfigListEntry('Picon save path:', config.plugins.e2m3u2b.iconpath, 'Select where to save picons (if download is enabled)'))
         self.list.append(getConfigListEntry('Show in extensions:', config.plugins.e2m3u2b.extensions, 'Show in extensions menu'))
         self.list.append(getConfigListEntry('Show in main menu:', config.plugins.e2m3u2b.mainmenu, 'Show in main menu'))
@@ -331,6 +336,18 @@ class E2m3u2b_Log(Screen):
         with open(filename, 'w') as f:
             f.write(log.getvalue())
         self.session.open(MessageBox, 'Log file has been saved to the tmp directory', MessageBox.TYPE_INFO, timeout=30)
+
+class E2m3u2b_Check(Screen):
+    def __init__(self, session):
+        Screen.__init__(self, session)
+        self.session = session
+        self.onShown.append(self.epimport_check)
+
+    def epimport_check(self):
+        if EPGImport is None:
+            self.session.open(MessageBox, 'EPG Import not found\nPlease install the EPG Import plugin',
+                              MessageBox.TYPE_WARNING, timeout=10)
+            self.close()
 
 
 #class SetupSummary(Screen):
