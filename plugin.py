@@ -148,11 +148,11 @@ def do_update():
 
     e2m3u2b_config = e2m3u2bouquet.Config()
     if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
-        e2m3u2b_config.providers = e2m3u2b_config.read_config(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml'))
+        e2m3u2b_config.read_config(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml'))
 
         providers_updated = False
 
-        for provider in e2m3u2b_config.providers:
+        for key, provider in e2m3u2b_config.providers.iteritems():
             if provider.enabled and not provider.name.startswith('Supplier Name'):
                 if int(time.time()) - int(provider.last_provider_update) > 21600:
                     # wait at least 6 hours (21600s) between update checks

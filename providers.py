@@ -95,7 +95,7 @@ class E2m3u2b_Providers(Screen):
 
         self.e2m3u2b_config = e2m3u2bouquet.Config()
         if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
-            self.e2m3u2b_config.providers = self.e2m3u2b_config.read_config(os.path.join(CFGPATH, 'config.xml'))
+            self.e2m3u2b_config.read_config(os.path.join(CFGPATH, 'config.xml'))
 
         self.refresh()
         self["pleasewait"].hide()
@@ -108,15 +108,12 @@ class E2m3u2b_Providers(Screen):
         provider = e2m3u2bouquet.Provider()
         provider.name = 'New'
         provider.enabled = True
-        self.e2m3u2b_config.providers.append(provider)
+        self.e2m3u2b_config.providers[provider.name] = provider
         self.session.openWithCallback(self.provider_add_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, provider)
 
     def openSelected(self):
         provider_name = self['list'].getCurrent()[1]
-        # find provider in providers list
-        provider = next((x for x in self.e2m3u2b_config.providers if x.name == provider_name), None)
-
-        self.session.openWithCallback(self.provider_config_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, provider)
+        self.session.openWithCallback(self.provider_config_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, self.e2m3u2b_config.providers[provider_name])
 
     def buildListEntry(self, provider):
         if provider.enabled:
@@ -135,7 +132,7 @@ class E2m3u2b_Providers(Screen):
     def refresh(self):
         self.drawList = []
 
-        for provider in self.e2m3u2b_config.providers:
+        for key, provider in self.e2m3u2b_config.providers.iteritems():
             self.drawList.append(self.buildListEntry(provider))
         self['list'].setList(self.drawList)
 
@@ -148,12 +145,8 @@ class E2m3u2b_Providers(Screen):
         self.refresh()
 
     def provider_add_callback(self):
-        for x in self.e2m3u2b_config.providers:
-            if x.name == 'New':
-                try:
-                    self.e2m3u2b_config.providers.remove(x)
-                except ValueError:
-                    pass
+        if 'New' in self.e2m3u2b_config.providers:
+            self.e2m3u2b_config.providers.pop('New', None)
         self.refresh()
 
 class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
@@ -325,6 +318,8 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.provider.enabled = False
 
         if self.provider_name.value != '' and self.provider_name.value != previous_name:
+            # update provider dict key if name changed
+            self.e2m3u2b_config.providers[self.provider_name.value] = self.e2m3u2b_config.providers.pop(previous_name)
             print>> log, '[e2m3u2b] Provider {} updated'.format(self.provider_name.value)
 
         # save xml config
@@ -354,9 +349,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         if not result:
             return
         print>> log, '[e2m3u2b] Provider {} delete'.format(self.provider.name)
-        try:
-            self.e2m3u2b_config.providers.remove(self.provider)
-        except ValueError:
-            pass
+        self.e2m3u2b_config.providers.pop(self.provider.name, None)
         self.e2m3u2b_config.write_config()
         self.close()
