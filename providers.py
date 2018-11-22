@@ -1,6 +1,7 @@
 import os
 import log
-import providersmanager as PM
+#import providersmanager as PM
+import e2m3u2bouquet
 from enigma import eTimer
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
 			 ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
@@ -35,13 +36,13 @@ class E2m3u2b_Providers(Screen):
             <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
             <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
             <ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" transparent="1" alphatest="on" />
-            <ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" transparent="1" alphatest="on" />            
+            <ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" transparent="1" alphatest="on" />
             <widget source="list" render="Listbox" position="10,50" size="580,430" scrollbarMode="showOnDemand">
                 <convert type="TemplatedMultiContent">
                     {"template": [
                         MultiContentEntryPixmapAlphaTest(pos = (10, 0), size = (32, 32), png = 0),
                         MultiContentEntryText(pos = (47, 0), size = (400, 30), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 1),
-                        MultiContentEntryText(pos = (450, 0), size = (120, 30), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 2),                                            
+                        MultiContentEntryText(pos = (450, 0), size = (120, 30), font=0, flags = RT_HALIGN_LEFT|RT_VALIGN_TOP, text = 2),
                         ],
                         "fonts": [gFont("Regular",22)],
                         "itemHeight": 30
@@ -92,8 +93,9 @@ class E2m3u2b_Providers(Screen):
     def prepare(self):
         self.activityTimer.stop()
 
-        self.providers_config = PM.ProvidersConfig()
-        self.providers_config.read()
+        self.e2m3u2b_config = e2m3u2bouquet.Config()
+        if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
+            self.e2m3u2b_config.read_config(os.path.join(CFGPATH, 'config.xml'))
 
         self.refresh()
         self["pleasewait"].hide()
@@ -103,18 +105,18 @@ class E2m3u2b_Providers(Screen):
         self.close()
 
     def key_add(self):
-        provider = PM.ProviderConfigEntry()
+        provider = e2m3u2bouquet.Provider()
         provider.name = 'New'
         provider.enabled = True
-        self.providers_config.providers[provider.name] = provider
-        self.session.openWithCallback(self.provider_add_callback, E2m3u2b_Providers_Config, self.providers_config, self.providers_config.providers[provider.name])
+        self.e2m3u2b_config.providers[provider.name] = provider
+        self.session.openWithCallback(self.provider_add_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, provider)
 
     def openSelected(self):
-        provider = self['list'].getCurrent()[1]
-        self.session.openWithCallback(self.provider_config_callback, E2m3u2b_Providers_Config, self.providers_config, self.providers_config.providers[provider])
+        provider_name = self['list'].getCurrent()[1]
+        self.session.openWithCallback(self.provider_config_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, self.e2m3u2b_config.providers[provider_name])
 
-    def buildListEntry(self, enabled, name):
-        if enabled:
+    def buildListEntry(self, provider):
+        if provider.enabled:
             try:
                 pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_ACTIVE_SKIN, 'icons/lock_on.png'))
             except:
@@ -125,16 +127,16 @@ class E2m3u2b_Providers(Screen):
             except:
                 pixmap = LoadPixmap(cached=True, path=resolveFilename(SCOPE_CURRENT_SKIN, 'skin_default/icons/lock_off.png'))
 
-        return (pixmap, str(name), '')
+        return (pixmap, str(provider.name), '')
 
     def refresh(self):
         self.drawList = []
 
-        for provider in self.providers_config.providers:
-            self.drawList.append(self.buildListEntry(self.providers_config.providers[provider].enabled, provider))
+        for key, provider in self.e2m3u2b_config.providers.iteritems():
+            self.drawList.append(self.buildListEntry(provider))
         self['list'].setList(self.drawList)
 
-        if not self.providers_config.providers:
+        if not self.e2m3u2b_config.providers:
             self['no_providers'].show()
         else:
             self['no_providers'].hide()
@@ -143,8 +145,8 @@ class E2m3u2b_Providers(Screen):
         self.refresh()
 
     def provider_add_callback(self):
-        if 'New' in self.providers_config.providers:
-            self.providers_config.providers.pop('New')
+        if 'New' in self.e2m3u2b_config.providers:
+            self.e2m3u2b_config.providers.pop('New', None)
         self.refresh()
 
 class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
@@ -156,7 +158,7 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
     <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
     <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
     <widget name="key_yellow" position="280,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
-    <widget name="config" position="10,60" size="590,330" scrollbarMode="showOnDemand" />    
+    <widget name="config" position="10,60" size="590,330" scrollbarMode="showOnDemand" />
     <widget name="description" position="10,410" size="590,80" font="Regular;18" halign="center" valign="top" transparent="0" zPosition="1"/>
     <widget name="pleasewait" position="10,60" size="590,350" font="Regular;18" halign="center" valign="center" transparent="0" zPosition="2"/>
     </screen>"""
@@ -164,8 +166,9 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
     def __init__(self, session, providers_config, provider):
         Screen.__init__(self, session)
         self.session = session
-        self.providers_config = providers_config
+        self.e2m3u2b_config = providers_config
         self.provider = provider
+
         self.setup_title = 'Provider Configure - {}'.format(provider.name)
         Screen.setTitle(self, self.setup_title)
         self.skinName = ["E2m3u2b_Providers_Config", "AutoBouquetsMaker_ProvidersSetup"]
@@ -316,11 +319,11 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
 
         if self.provider_name.value != '' and self.provider_name.value != previous_name:
             # update provider dict key if name changed
-            self.providers_config.providers[self.provider_name.value] = self.providers_config.providers.pop(previous_name)
+            self.e2m3u2b_config.providers[self.provider_name.value] = self.e2m3u2b_config.providers.pop(previous_name)
             print>> log, '[e2m3u2b] Provider {} updated'.format(self.provider_name.value)
 
         # save xml config
-        self.providers_config.write()
+        self.e2m3u2b_config.write_config()
         self.close()
 
     def cancelConfirm(self, result):
@@ -346,6 +349,6 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         if not result:
             return
         print>> log, '[e2m3u2b] Provider {} delete'.format(self.provider.name)
-        self.providers_config.providers.pop(self.provider.name, None)
-        self.providers_config.write()
+        self.e2m3u2b_config.providers.pop(self.provider.name, None)
+        self.e2m3u2b_config.write_config()
         self.close()
