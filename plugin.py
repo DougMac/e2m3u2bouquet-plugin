@@ -4,9 +4,9 @@ import errno
 import sys
 import log
 import urllib
+import providersmanager as PM
 
 from menu import E2m3u2b_Menu
-from menu import E2m3u2b_Check
 
 from enigma import eTimer
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
@@ -17,12 +17,8 @@ from Screens.MessageBox import MessageBox
 from Plugins.Plugin import PluginDescriptor
 from Components.PluginComponent import plugins
 
-import e2m3u2bouquet
 
-try:
-    import Plugins.Extensions.EPGImport.EPGImport as EPGImport
-except ImportError:
-    EPGImport = None
+import e2m3u2bouquet
 
 # Global variable
 autoStartTimer = None
@@ -47,6 +43,7 @@ config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/pi
                                                            '/picon/'
                                                            ])
 config.plugins.e2m3u2b.last_update = ConfigText()
+config.plugins.e2m3u2b.last_provider_update = ConfigText(default='0')
 config.plugins.e2m3u2b.extensions = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.mainmenu = ConfigYesNo(default=False)
 
@@ -64,7 +61,6 @@ config.plugins.e2m3u2b.allbouquet = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.picons = ConfigYesNo(default=False)
 config.plugins.e2m3u2b.srefoverride = ConfigEnableDisable(default=False)
 config.plugins.e2m3u2b.bouquetdownload = ConfigEnableDisable(default=False)
-config.plugins.e2m3u2b.last_provider_update = ConfigText(default='')
 
 
 class AutoStartTimer:
@@ -146,49 +142,66 @@ def do_update():
     """
     print('do_update called')
 
-    e2m3u2b_config = e2m3u2bouquet.Config()
-    if os.path.isfile(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml')):
-        e2m3u2b_config.read_config(os.path.join(e2m3u2bouquet.CFGPATH, 'config.xml'))
+    providers_config = PM.ProvidersConfig()
+    providers_config.read()
 
-        providers_updated = False
+    for provider_name in providers_config.providers:
+        provider = providers_config.providers[provider_name]
 
-        for key, provider in e2m3u2b_config.providers.iteritems():
-            if provider.enabled and not provider.name.startswith('Supplier Name'):
-                if int(time.time()) - int(provider.last_provider_update) > 21600:
-                    # wait at least 6 hours (21600s) between update checks
-                    providers_updated = provider.provider_update()
-                # Use plugin config picon path if none set
-                if not provider.icon_path:
-                    provider.icon_path = config.plugins.e2m3u2b.iconpath.value
+        if provider.enabled and not provider.name.startswith('Supplier Name'):
+            sys.argv = []
+            sys.argv.append('-n={}'.format(provider.name))
+            if provider.username:
+                sys.argv.append('-u={}'.format(provider.username))
+            if provider.password:
+                sys.argv.append('-p={}'.format(provider.password))
+            sys.argv.append('-m={}'.format(provider.m3u_url.replace('USERNAME', urllib.quote_plus(provider.username)).replace('PASSWORD', urllib.quote_plus(provider.password))))
+            sys.argv.append('-e={}'.format(provider.epg_url.replace('USERNAME', urllib.quote_plus(provider.username)).replace('PASSWORD', urllib.quote_plus(provider.password))))
 
-                print>> log, '[e2m3u2b] Starting backend script'
-                provider.process_provider()
-                print>> log, '[e2m3u2b] Finished backend script'
+            if provider.iptv_types:
+                sys.argv.append('-i')
+            if provider.streamtype_tv:
+                sys.argv.append('-sttv={}'.format(provider.streamtype_tv))
+            if provider.streamtype_vod:
+                sys.argv.append('-stvod={}'.format(provider.streamtype_vod))
+            if provider.multi_vod:
+                sys.argv.append('-M')
+            if provider.all_bouquet:
+                sys.argv.append('-a')
+            if provider.picons:
+                sys.argv.append('-P')
+                sys.argv.append('-q={}'.format(config.plugins.e2m3u2b.iconpath.value))
+            if not provider.sref_override:
+                sys.argv.append('-xs')
+            if provider.bouquet_top:
+                sys.argv.append('-bt')
+            if provider.bouquet_download:
+                sys.argv.append('-bd')
+            if provider.bouquet_url:
+                sys.argv.append('-b={}'.format(provider.bouquet_url.replace('USERNAME', urllib.quote_plus(provider.username)).replace('PASSWORD', urllib.quote_plus(provider.password))))
 
-                localtime = time.asctime(time.localtime(time.time()))
-                config.plugins.e2m3u2b.last_update.value = localtime
-                config.plugins.e2m3u2b.last_update.save()
+            # Call backend module with args
+            print>> log, '[e2m3u2b] Starting backend script'
+            e2m3u2bouquet.main(sys.argv)
+            print>> log, '[e2m3u2b] Finished backend script'
 
-            if providers_updated:
-                e2m3u2b_config.write_config()
+            localtime = time.asctime(time.localtime(time.time()))
+            config.plugins.e2m3u2b.last_update.value = localtime
+            config.plugins.e2m3u2b.last_update.save()
 
 def do_reset():
     """Reset bouquets and
     epg importer config by running the script uninstall method
     """
     print('do_reset called')
-    e2m3u2bouquet.uninstaller()
-    e2m3u2bouquet.reload_bouquets()
+
+    iptv = e2m3u2bouquet.IPTVSetup()
+    iptv.uninstaller()
+    iptv.reload_bouquets()
+
 
 def main(session, **kwargs):
     check_cfg_folder()
-    if not EPGImport:
-        session.openWithCallback(open_menu(session), E2m3u2b_Check)
-    else:
-        open_menu(session)
-
-
-def open_menu(session):
     session.open(E2m3u2b_Menu)
 
 def check_cfg_folder():
@@ -299,7 +312,7 @@ def update_main_menu(cfg_el):
 
 plugin_name = 'IPTV Bouquet Maker'
 plugin_description = 'IPTV for Enigma2 - E2m3u2bouquet plugin'
-print('[e2m3u2b] add notifier')
+print('[e2m3u2b]add notifier')
 extDescriptor = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=extensions_menu)
 extDescriptorQuick = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_EXTENSIONSMENU, fnc=quick_import_menu)
 extDescriptorQuickMain = PluginDescriptor(name=plugin_name, description=plugin_description, where=PluginDescriptor.WHERE_MENU, fnc=menuHook)
