@@ -32,11 +32,6 @@ except:
     pass
 from Tools.LoadPixmap import LoadPixmap
 
-try:
-    import EPGImport
-except ImportError:
-    EPGImport = None
-
 
 class E2m3u2b_Menu(Screen):
     skin = """
@@ -92,7 +87,6 @@ class E2m3u2b_Menu(Screen):
              self.build_list_entry('Show Log'),
              self.build_list_entry('About')]
         self['list'].list = l
-
 
     def build_list_entry(self, description):
         pixmap = LoadPixmap(cached=True, path='{}/images/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'blank.png'))
@@ -168,12 +162,12 @@ class E2m3u2b_Menu(Screen):
 
 class E2m3u2b_Config(ConfigListScreen, Screen):
     skin = """
-        <screen position="center,center" size="600,500">
+        <screen position="center,center" size="600,500">    
         <ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" transparent="1" alphatest="on" />
-        <ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" transparent="1" alphatest="on" />
+        <ePixmap pixmap="skin_default/buttons/green.png" position="140,0" size="140,40" transparent="1" alphatest="on" />    
         <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
-        <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
-        <widget name="config" position="10,60" size="590,350" scrollbarMode="showOnDemand" />
+        <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />                
+        <widget name="config" position="10,60" size="590,350" scrollbarMode="showOnDemand" />        
         </screen>"""
 
     def __init__(self, session):
@@ -214,7 +208,8 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry(2 * indent + 'Update interval (hours):', config.plugins.e2m3u2b.updateinterval, 'Set the number of hours between automatic bouquet updates'))
             if config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
                 self.list.append(getConfigListEntry(2 * indent + 'Time to start update:', config.plugins.e2m3u2b.schedulefixedtime, 'Set the day of time to perform the bouquet update'))
-        self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
+        # leave update at boot disabled for now
+        # self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
         self.list.append(getConfigListEntry('Picon save path:', config.plugins.e2m3u2b.iconpath, 'Select where to save picons (if download is enabled)'))
         self.list.append(getConfigListEntry('Show in extensions:', config.plugins.e2m3u2b.extensions, 'Show in extensions menu'))
         self.list.append(getConfigListEntry('Show in main menu:', config.plugins.e2m3u2b.mainmenu, 'Show in main menu'))
@@ -256,9 +251,9 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 class E2m3u2b_Status(Screen):
     skin = """
         <screen position="center,center" size="600,500">
-            <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="5"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+            <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="5"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />        
             <ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" transparent="1" alphatest="on" />
-            <widget name="about" position="10,50" size="580,430" font="Regular;18"/>
+            <widget name="about" position="10,50" size="580,430" font="Regular;18"/>                    
         </screen>
         """
 
@@ -288,11 +283,11 @@ class E2m3u2b_Log(Screen):
     skin = """
     <screen position="center,center" size="600,500">
     <ePixmap name="red" position="0,0" zPosition="2" size="140,40" pixmap="skin_default/buttons/red.png" transparent="1" alphatest="on" />
-    <ePixmap name="green" position="140,0" zPosition="2" size="140,40" pixmap="skin_default/buttons/green.png" transparent="1" alphatest="on" />
-    <ePixmap name="blue" position="280,0" zPosition="2" size="140,40" pixmap="skin_default/buttons/blue.png" transparent="1" alphatest="on" />
+    <ePixmap name="green" position="140,0" zPosition="2" size="140,40" pixmap="skin_default/buttons/green.png" transparent="1" alphatest="on" />    
+    <ePixmap name="blue" position="280,0" zPosition="2" size="140,40" pixmap="skin_default/buttons/blue.png" transparent="1" alphatest="on" />    
     <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
-    <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
-    <widget name="key_blue" position="280,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+    <widget name="key_green" position="140,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />    
+    <widget name="key_blue" position="280,0" size="140,40" valign="center" halign="center" zPosition="4" foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />        
     <widget name="list" position="10,40" size="540,340" />
     </screen>"""
 
@@ -336,18 +331,6 @@ class E2m3u2b_Log(Screen):
         with open(filename, 'w') as f:
             f.write(log.getvalue())
         self.session.open(MessageBox, 'Log file has been saved to the tmp directory', MessageBox.TYPE_INFO, timeout=30)
-
-class E2m3u2b_Check(Screen):
-    def __init__(self, session):
-        Screen.__init__(self, session)
-        self.session = session
-        self.onShown.append(self.epimport_check)
-
-    def epimport_check(self):
-        if EPGImport is None:
-            self.session.open(MessageBox, 'EPG Import not found\nPlease install the EPG Import plugin',
-                              MessageBox.TYPE_WARNING, timeout=10)
-            self.close()
 
 
 #class SetupSummary(Screen):

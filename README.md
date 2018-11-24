@@ -38,6 +38,3 @@ of entered using the remote
 #### v0.7.6
 * Change 'Run' to 'Create Bouquets'
 * Add additional picon save locations
-
-#### v0.8
-* Warning if EPG Importer is not detected
