@@ -66,6 +66,10 @@ config.plugins.e2m3u2b.srefoverride = ConfigEnableDisable(default=False)
 config.plugins.e2m3u2b.bouquetdownload = ConfigEnableDisable(default=False)
 config.plugins.e2m3u2b.last_provider_update = ConfigText(default='')
 
+class AppUrlOpener(urllib.FancyURLopener):
+    """Set user agent for downloads
+    """
+    version = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36'
 
 class AutoStartTimer:
     def __init__(self, session):
@@ -181,6 +185,7 @@ def do_reset():
     e2m3u2bouquet.reload_bouquets()
 
 def main(session, **kwargs):
+    urllib._urlopener = AppUrlOpener()
     check_cfg_folder()
     if not EPGImport:
         session.openWithCallback(open_menu(session), E2m3u2b_Check)
@@ -228,6 +233,7 @@ def autostart(reason, session=None, **kwargs):
     # these globals need declared as they are reassigned here
     global autoStartTimer
     global _session
+    urllib._urlopener = AppUrlOpener()
     # reason is 0 at start and 1 at shutdown
     print>>log, '[e2m3u2b] autostart {} occured at {}'.format(reason, time.time())
     if reason == 0 and _session is None:
