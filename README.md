@@ -41,3 +41,5 @@ of entered using the remote
 
 #### v0.8
 * Warning if EPG Importer is not detected
+* Improved performace
+* Option to automatically import epg after update

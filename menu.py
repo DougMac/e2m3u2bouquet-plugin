@@ -2,6 +2,7 @@ import time
 import os
 import tempfile
 import sys
+import enigma
 import log
 import plugin as E2m3u2b_Plugin
 
@@ -10,9 +11,9 @@ from providers import E2m3u2b_Providers
 
 from enigma import eTimer
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
-			 ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
-			 ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
-             ConfigSelectionNumber
+            ConfigYesNo, ConfigClock, getConfigListEntry, ConfigText, \
+            ConfigSelection, ConfigNumber, ConfigSubDict, NoSave, ConfigPassword, \
+            ConfigSelectionNumber
 from Screens.MessageBox import MessageBox
 from Screens.Screen import Screen
 from Screens.ChoiceBox import ChoiceBox
@@ -32,8 +33,10 @@ except:
     pass
 from Tools.LoadPixmap import LoadPixmap
 
+import e2m3u2bouquet
+
 try:
-    import EPGImport
+    import Plugins.Extensions.EPGImport.EPGImport as EPGImport
 except ImportError:
     EPGImport = None
 
@@ -79,9 +82,12 @@ class E2m3u2b_Menu(Screen):
                                 }, -2)
         self['key_red'] = Button('Exit')
         self['key_green'] = Button('Run')
+        self.epgimport = None
 
+        if EPGImport and config.plugins.e2m3u2b.do_epgimport.value is True:
+            # skip channelfilter for IPTV
+            self.epgimport = EPGImport.EPGImport(enigma.eEPGCache.getInstance(), lambda x: True)
         self.createSetup()
-
 
     def createSetup(self):
         l = [self.build_list_entry('Configure'),
@@ -92,7 +98,6 @@ class E2m3u2b_Menu(Screen):
              self.build_list_entry('Show Log'),
              self.build_list_entry('About')]
         self['list'].list = l
-
 
     def build_list_entry(self, description):
         pixmap = LoadPixmap(cached=True, path='{}/images/{}'.format(os.path.dirname(sys.modules[__name__].__file__), 'blank.png'))
@@ -124,22 +129,7 @@ class E2m3u2b_Menu(Screen):
             return
 
     def manual_update(self):
-        """Manual update
-        """
-        self.session.openWithCallback(self.manual_update_callback, MessageBox, "Update of channels will start.\n"
-                                                                               "This may take a few minutes.\n"
-                                                                               "Proceed?", MessageBox.TYPE_YESNO,
-                                      timeout=15, default=True)
-
-    def manual_update_callback(self, confirmed):
-        if not confirmed:
-            return
-        try:
-            E2m3u2b_Plugin.do_update()
-        except Exception, e:
-            print>> log, "[e2m3u2b] manual_update_callback Error:", e
-            if config.plugins.e2m3u2b.debug.value:
-                raise
+        self.session.open(E2m3u2b_Update, self.epgimport)
 
     def reset_bouquets(self):
         """Remove any generated bouquets
@@ -160,7 +150,6 @@ class E2m3u2b_Menu(Screen):
             print>> log, "[e2m3u2b] reset_bouquets_callback Error:", e
             if config.plugins.e2m3u2b.debug.value:
                 raise
-
 
     def keyCancel(self):
         self.close()
@@ -216,6 +205,7 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
                 self.list.append(getConfigListEntry(2 * indent + 'Time to start update:', config.plugins.e2m3u2b.schedulefixedtime, 'Set the day of time to perform the bouquet update'))
         self.list.append(getConfigListEntry('Automatic bouquet update (when box starts):', config.plugins.e2m3u2b.autobouquetupdateatboot, 'Update bouquets at startup'))
         self.list.append(getConfigListEntry('Picon save path:', config.plugins.e2m3u2b.iconpath, 'Select where to save picons (if download is enabled)'))
+        self.list.append(getConfigListEntry('Attempt Epg Import', config.plugins.e2m3u2b.do_epgimport, 'Automatically run Epg Import after bouquet update'))
         self.list.append(getConfigListEntry('Show in extensions:', config.plugins.e2m3u2b.extensions, 'Show in extensions menu'))
         self.list.append(getConfigListEntry('Show in main menu:', config.plugins.e2m3u2b.mainmenu, 'Show in main menu'))
         self.list.append(getConfigListEntry('Debug mode:', config.plugins.e2m3u2b.debug, 'Enable debug mode. Do not enable unless requested'))
@@ -238,7 +228,23 @@ class E2m3u2b_Config(ConfigListScreen, Screen):
 
     def keySave(self):
         self.saveAll()
+        self.reset_legacy_config()
+        config.plugins.e2m3u2b.cfglevel.value = '2'
+        config.plugins.e2m3u2b.cfglevel.save()
         self.close()
+
+    def reset_legacy_config(self):
+        if config.plugins.e2m3u2b.cfglevel.value == '1':
+            cfg_list = [config.plugins.e2m3u2b.providername, config.plugins.e2m3u2b.username,
+                        config.plugins.e2m3u2b.password, config.plugins.e2m3u2b.iptvtypes,
+                        config.plugins.e2m3u2b.multivod, config.plugins.e2m3u2b.bouquetpos,
+                        config.plugins.e2m3u2b.allbouquet, config.plugins.e2m3u2b.picons,
+                        config.plugins.e2m3u2b.srefoverride, config.plugins.e2m3u2b.bouquetdownload,
+                        config.plugins.e2m3u2b.last_provider_update]
+            for x in cfg_list:
+                x.value = ''
+                x.save()
+
 
     def cancelConfirm(self, result):
         if not result:
@@ -336,6 +342,93 @@ class E2m3u2b_Log(Screen):
         with open(filename, 'w') as f:
             f.write(log.getvalue())
         self.session.open(MessageBox, 'Log file has been saved to the tmp directory', MessageBox.TYPE_INFO, timeout=30)
+
+
+class E2m3u2b_Update(Screen):
+    skin = """
+            <screen position="center,center" size="600,500">
+                <widget name="key_red" position="0,0" size="140,40" valign="center" halign="center" zPosition="5"  foregroundColor="white" font="Regular;20" transparent="1" shadowColor="background" shadowOffset="-2,-2" />
+                <ePixmap pixmap="skin_default/buttons/red.png" position="0,0" size="140,40" transparent="1" alphatest="on" />
+                <widget name="about" position="10,50" size="580,430" font="Regular;16"/>
+            </screen>
+            """
+
+    def __init__(self, session, epgimport):
+        self.session = session
+        Screen.__init__(self, session)
+        Screen.setTitle(self, "IPTV Bouquet Maker - Create Bouquets")
+        self.skinName = ['E2m3u2b_Update', 'AutoBouquetsMaker_About']
+
+        self["actions"] = ActionMap(["SetupActions", "ColorActions", "MenuActions"],
+                                    {
+                                        "red": self.keyCancel,
+                                        "cancel": self.keyCancel,
+                                        "menu": self.keyCancel
+                                    }, -2)
+        self["key_red"] = Button("Close")
+
+        self['about'] = Label()
+        self['about'].setText('Starting...')
+
+        self.activityTimer = eTimer()
+        self.activityTimer.timeout.get().append(self.prepare)
+        self.update_status_timer = eTimer()
+        self.update_status_timer.callback.append(self.update_status)
+
+        self.epgimport = epgimport
+        self.onLayoutFinish.append(self.populate)
+
+    def populate(self):
+        self.activityTimer.start(1)
+
+    def prepare(self):
+        self.activityTimer.stop()
+        self.manual_update()
+
+    def keyCancel(self):
+        self.update_status_timer.stop()
+        self.close()
+
+    def manual_update(self):
+        """Manual update
+        """
+        is_epgimport_running = False
+        if self.epgimport:
+            is_epgimport_running = self.epgimport.isImportRunning()
+
+        if is_epgimport_running or e2m3u2bouquet.Status.is_running:
+            self.session.open(MessageBox, "Update still in progress. Please wait."
+                              , MessageBox.TYPE_ERROR, timeout=10, close_on_any_key=True)
+            self.close()
+            return
+        else:
+            self.session.openWithCallback(self.manual_update_callback, MessageBox, "Update of channels will start.\n"
+                                          "This may take a few minutes.\n"
+                                          "Proceed?", MessageBox.TYPE_YESNO,
+                                          timeout=15, default=True)
+
+    def manual_update_callback(self, confirmed):
+        if not confirmed:
+            self.close()
+            return
+        try:
+            self.start_update()
+        except Exception, e:
+            print>> log, "[e2m3u2b] manual_update_callback Error:", e
+            if config.plugins.e2m3u2b.debug.value:
+                raise
+
+    def start_update(self):
+        self.update_status_timer.start(2000)
+        E2m3u2b_Plugin.start_update(self.epgimport)
+
+    def update_status(self):
+        self['about'].setText(e2m3u2bouquet.Status.message)
+
+        if self.epgimport and self.epgimport.isImportRunning():
+            self['about'].setText('EPG Import: Importing {} {} events'.format(self.epgimport.source.description,
+                                                                              self.epgimport.eventCount))
+
 
 class E2m3u2b_Check(Screen):
     def __init__(self, session):
