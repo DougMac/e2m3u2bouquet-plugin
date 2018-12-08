@@ -47,7 +47,7 @@ config.plugins.e2m3u2b.iconpath = ConfigSelection(default='/usr/share/enigma2/pi
                                                            '/media/usb/picon/',
                                                            '/media/hdd/picon/',
                                                            '/media/cf/picon/',
-                                                           '/media/mmc/picon/'
+                                                           '/media/mmc/picon/',
                                                            '/picon/'
                                                            ])
 config.plugins.e2m3u2b.last_update = ConfigText()
