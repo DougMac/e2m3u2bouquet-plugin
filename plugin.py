@@ -191,10 +191,10 @@ def start_update_callback(result, epgimport_sourcefiles, start_time, epgimport=N
         epgimport.beginImport(longDescUntil=time.time() + (5 * 24 * 3600))
 
 
-def start_process_providers(providers, e2m3u2b_config):
+def start_process_providers(providers_to_process, e2m3u2b_config):
     providers_updated = False
 
-    for provider_config in providers:
+    for provider_config in providers_to_process:
         provider = e2m3u2bouquet.Provider(provider_config)
 
         if int(time.time()) - int(provider.config.last_provider_update) > 21600:

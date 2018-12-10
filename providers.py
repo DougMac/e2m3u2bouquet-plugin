@@ -105,9 +105,10 @@ class E2m3u2b_Providers(Screen):
         self.close()
 
     def key_add(self):
-        provider = e2m3u2bouquet.Provider()
+        provider = e2m3u2bouquet.ProviderConfig()
         provider.name = 'New'
         provider.enabled = True
+
         self.e2m3u2b_config.providers[provider.name] = provider
         self.session.openWithCallback(self.provider_add_callback, E2m3u2b_Providers_Config, self.e2m3u2b_config, provider)
 
