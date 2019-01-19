@@ -43,3 +43,9 @@ of entered using the remote
 * Warning if EPG Importer is not detected
 * Improved performace
 * Option to automatically import epg after update
+
+#### v0.8.1
+* Fix issue where new providers couldn't be added
+
+#### v0.8.2
+* Fix issue with fixed time update schedule
