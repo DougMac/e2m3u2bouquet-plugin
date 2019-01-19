@@ -18,6 +18,7 @@ from Plugins.Plugin import PluginDescriptor
 from Components.PluginComponent import plugins
 
 from twisted.internet import reactor, threads
+import twisted.python.runtime
 
 import e2m3u2bouquet
 
@@ -102,7 +103,7 @@ class AutoStartTimer:
         else:
             return -1
 
-    def update(self, atLeast=0):
+    def update(self):
         print>>log, '[e2m3u2b] AutoStartTimer -> update'
         self.timer.stop()
         wake = self.get_wake_time()
@@ -110,14 +111,16 @@ class AutoStartTimer:
         now = int(nowt)
 
         if wake > 0:
-            if wake < now + atLeast:
+            if wake <= now:
+                # new wake time is in past set to the future time / interval
                 if config.plugins.e2m3u2b.scheduletype.value == 'interval':
                     interval = int(config.plugins.e2m3u2b.updateinterval.value)
-                    wake += interval * 60 * 60 # add interval in hours if wake up time is in past
+                    wake += interval * 60 * 60  # add interval in hours if wake up time is in past
                 elif config.plugins.e2m3u2b.scheduletype.value == 'fixed time':
-                    wake += 60 * 60 * 24 # add 1 day to fixed time if wake up time is in past
-            next = wake - now
-            self.timer.startLongTimer(next)
+                    wake += 60 * 60 * 24  # add 1 day to fixed time if wake up time is in past
+
+            next_wake = wake - now
+            self.timer.startLongTimer(next_wake)
         else:
             wake = -1
 
@@ -129,7 +132,6 @@ class AutoStartTimer:
         self.timer.stop()
         now = int(time.time())
         wake = now
-        atLeast = 0
         print>> log, '[e2m3u2b] on_timer occured at {}'.format(now)
         print>> log, '[e2m3u2b] Stating bouquet update because auto update bouquet schedule is enabled'
 
@@ -144,7 +146,7 @@ class AutoStartTimer:
                 print>> log, "[e2m3u2b] on_timer Error:", e
                 if config.plugins.e2m3u2b.debug.value:
                     raise
-        self.update(atLeast)
+        self.update()
 
     def get_status(self):
         print>> log, '[e2m3u2b] AutoStartTimer -> getStatus'
@@ -169,12 +171,17 @@ def start_update(epgimport=None):
                                                         .format(e2m3u2bouquet.get_safe_filename(provider_config.name)))
                 epgimport_sourcefiles.append(epgimport_sourcefilename)
 
-        d = threads.deferToThread(start_process_providers, providers_to_process, e2m3u2b_config)
-        d.addCallback(start_update_callback, epgimport_sourcefiles, int(time.time()), epgimport)
+        if twisted.python.runtime.platform.supportsThreads():
+            d = threads.deferToThread(start_process_providers, providers_to_process, e2m3u2b_config)
+            d.addCallback(start_update_callback, epgimport_sourcefiles, int(time.time()), epgimport)
+        else:
+            start_process_providers(providers_to_process, e2m3u2b_config)
+            start_update_callback(None, epgimport_sourcefiles, int(time.time()), epgimport)
 
 
 def start_update_callback(result, epgimport_sourcefiles, start_time, epgimport=None):
     elapsed_secs = (int(time.time())) - start_time
+
     msg = 'Finished bouquet update in {}s'.format(str(elapsed_secs))
     e2m3u2bouquet.Status.message = msg
     print>> log, '[e2m3u2b] {}'.format(msg)
