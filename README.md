@@ -49,3 +49,6 @@ of entered using the remote
 
 #### v0.8.2
 * Fix issue with fixed time update schedule
+
+#### v0.8.3
+* Playlist parsing updates
