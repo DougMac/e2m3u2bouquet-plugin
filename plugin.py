@@ -80,7 +80,10 @@ class AutoStartTimer:
     def __init__(self, session):
         self.session = session
         self.timer = eTimer()
-        self.timer.callback.append(self.on_timer)
+        try:
+            self.timer_conn = self.timer.timeout.connect(self.on_timer)
+        except:
+            self.timer.callback.append(self.on_timer)
         self.update()
 
     def get_wake_time(self):
@@ -181,7 +184,6 @@ def start_update(epgimport=None):
 
 def start_update_callback(result, epgimport_sourcefiles, start_time, epgimport=None):
     elapsed_secs = (int(time.time())) - start_time
-
     msg = 'Finished bouquet update in {}s'.format(str(elapsed_secs))
     e2m3u2bouquet.Status.message = msg
     print>> log, '[e2m3u2b] {}'.format(msg)
@@ -231,7 +233,7 @@ def epgimport_sources(sourcefiles):
             for s in EPGConfig.enumSourcesFile(sourcefile):
                 yield s
         except Exception, e:
-            print>> log, '[e2m3u2b] Failed top open epg source ', sourcefile, ' Error: ', e
+            print>> log, '[e2m3u2b] Failed to open epg source ', sourcefile, ' Error: ', e
 
 
 def epgimport_done(reboot=False, epgfile=None):

@@ -371,9 +371,16 @@ class E2m3u2b_Update(Screen):
         self['about'].setText('Starting...')
 
         self.activityTimer = eTimer()
-        self.activityTimer.timeout.get().append(self.prepare)
+        try:
+            self.activityTimer_conn = self.activityTimer.timeout.connect(self.prepare)
+        except:
+            self.activityTimer.timeout.get().append(self.prepare)
+
         self.update_status_timer = eTimer()
-        self.update_status_timer.callback.append(self.update_status)
+        try:
+            self.update_status_timer_conn = self.update_status_timer.timeout.connect(self.update_status)
+        except:
+            self.update_status_timer.callback.append(self.update_status)
 
         self.epgimport = epgimport
         self.onLayoutFinish.append(self.populate)

@@ -1,6 +1,5 @@
 import os
 import log
-#import providersmanager as PM
 import e2m3u2bouquet
 from enigma import eTimer
 from Components.config import config, ConfigEnableDisable, ConfigSubsection, \
@@ -64,7 +63,10 @@ class E2m3u2b_Providers(Screen):
         self["list"] = List(self.drawList)
 
         self.activityTimer = eTimer()
-        self.activityTimer.timeout.get().append(self.prepare)
+        try:
+            self.activityTimer_conn = self.activityTimer.timeout.connect(self.prepare)
+        except:
+            self.activityTimer.timeout.get().append(self.prepare)
 
         self["actions"] = ActionMap(["ColorActions", "SetupActions", "MenuActions"],
                                     {
@@ -179,7 +181,10 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
         ConfigListScreen.__init__(self, self.list, session=self.session, on_change=self.changedEntry)
 
         self.activityTimer = eTimer()
-        self.activityTimer.timeout.get().append(self.prepare)
+        try:
+            self.activityTimer_conn = self.activityTimer.timeout.connect(self.prepare)
+        except:
+            self.activityTimer.timeout.get().append(self.prepare)
 
         self['actions'] = ActionMap(['SetupActions', 'ColorActions', 'VirtualKeyboardActions', 'MenuActions'],
                                     {
@@ -258,8 +263,9 @@ class E2m3u2b_Providers_Config(ConfigListScreen, Screen):
             self.list.append(getConfigListEntry('Enabled:', self.provider_enabled, 'Enable provider {}'.format(self.provider.name)))
             if self.provider_enabled.value:
                 self.list.append(getConfigListEntry('Setup mode:', self.provider_settings_level, 'Choose level of settings. Expert shows all options'))
-                self.list.append(getConfigListEntry('M3U url:', self.provider_m3u_url, 'Providers M3U url. USERNAME & PASSWORD will be replaced by values below'))
-                self.list.append(getConfigListEntry('EPG url:', self.provider_epg_url,'Providers EPG url. USERNAME & PASSWORD will be replaced by values below'))
+                if not self.provider.provider_hide_urls:
+                    self.list.append(getConfigListEntry('M3U url:', self.provider_m3u_url, 'Providers M3U url. USERNAME & PASSWORD will be replaced by values below'))
+                    self.list.append(getConfigListEntry('EPG url:', self.provider_epg_url,'Providers EPG url. USERNAME & PASSWORD will be replaced by values below'))
                 self.list.append(getConfigListEntry('Username:', self.provider_username, 'If set will replace USERNAME placeholder in urls'))
                 self.list.append(getConfigListEntry('Password:', self.provider_password, 'If set will replace PASSWORD placeholder in urls'))
                 self.list.append(getConfigListEntry('Multi VOD:', self.provider_multi_vod, 'Enable to create multiple VOD bouquets rather than single VOD bouquet'))
