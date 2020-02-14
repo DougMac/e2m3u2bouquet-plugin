@@ -55,3 +55,7 @@ of entered using the remote
 
 #### v0.8.4
 * Playlist parsing updates
+
+#### v0.8.5
+* Unicode fixes
+* Override file fixes
